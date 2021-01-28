@@ -9,24 +9,7 @@ readme = "README.md"
 
 [features]
 default = []
-
-runtime-actix-native-tls = ["sqlx/runtime-actix-native-tls"]
-runtime-async-std-native-tls = ["sqlx/runtime-async-std-native-tls"]
-runtime-tokio-native-tls = ["sqlx/runtime-tokio-native-tls"]
-runtime-actix-rustls = ["sqlx/runtime-actix-rustls"]
-runtime-async-std-rustls = ["sqlx/runtime-async-std-rustls"]
-runtime-tokio-rustls = ["sqlx/runtime-tokio-rustls"]
-
 macros = []
-docs = ["rustls", "postgres"]
-test = ["rustls", "postgres"]
-
-# database
-any = ["sqlx/any"]
-postgres = ["sqlx/postgres"]
-
-# tls implementation
-rustls = ["sqlx/runtime-tokio-rustls"]
 
 [dependencies]
 actix-web = "3.3.2"

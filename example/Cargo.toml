@@ -15,6 +15,6 @@ num_cpus = "1.13.0"
 serde = { version = "1.0.123", features = ["derive"] }
 serde_json = { version = "1.0.61", features = ["raw_value"] }
 sqlx = { version = "0.4.2", features = [ "postgres", "runtime-actix-rustls" ] }
-sqlx-actix-streaming = { path = "..", features = ["macros", "runtime-actix-rustls"] }
+sqlx-actix-streaming = { path = "..", features = ["macros"] }
 sys-info = "0.8.0"
 thiserror = "1.0.23"

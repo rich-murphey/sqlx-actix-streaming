@@ -1,7 +1,10 @@
-use actix_web::*;
-use bytes::BytesMut;
+use actix_web::{
+    error::ErrorInternalServerError,
+    web::{Bytes, BytesMut},
+};
 use futures::{
-    prelude::*,
+    Stream,
+    StreamExt,
     task::{Context, Poll},
 };
 pub use std::io::Write;
@@ -86,7 +89,7 @@ where
         T: serde::Serialize,
     {
         Self::pin(inner, move |buf, t| {
-            serde_json::to_writer(buf, t).map_err(error::ErrorInternalServerError)
+            serde_json::to_writer(buf, t).map_err(ErrorInternalServerError)
         })
     }
     #[inline]
@@ -99,7 +102,7 @@ where
         buf.0.extend_from_slice(&self.separator);
     }
     #[inline]
-    fn finish(&mut self, mut buf: BytesWriter) -> web::Bytes {
+    fn finish(&mut self, mut buf: BytesWriter) -> Bytes {
         self.state = ByteStreamState::Finished;
         buf.0.extend_from_slice(&self.suffix);
         buf.0.freeze()
@@ -110,7 +113,7 @@ impl<T, St> Stream for ByteStream<T, St>
 where
     St: Stream<Item = Result<T, sqlx::Error>>,
 {
-    type Item = Result<web::Bytes, actix_web::Error>;
+    type Item = Result<Bytes, actix_web::Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         use ByteStreamState::*;
@@ -131,7 +134,7 @@ where
                     };
                     let initial_len = buf.0.len();
                     if let Err(e) = (self.f)(&mut buf, &record) {
-                        return Ready(Some(Err(error::ErrorInternalServerError(e))));
+                        return Ready(Some(Err(ErrorInternalServerError(e))));
                     }
                     let item_size = buf.0.len() - initial_len;
                     if self.item_size < item_size {
@@ -146,7 +149,7 @@ where
                         continue;
                     }
                 }
-                Ready(Some(Err(e))) => return Ready(Some(Err(error::ErrorInternalServerError(e)))),
+                Ready(Some(Err(e))) => return Ready(Some(Err(ErrorInternalServerError(e)))),
                 Ready(None) => {
                     return if buf.0.is_empty() {
                         Ready(None)
