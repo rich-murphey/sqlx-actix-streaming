@@ -5,7 +5,7 @@ authors = ["rich-murphey <rich@murphey.org>"]
 edition = "2018"
 publish = false
 license = "MIT OR Apache-2.0"
-# readme = "README.md"
+readme = "README.md"
 
 [features]
 default = ["runtime-tokio-rustls"]
