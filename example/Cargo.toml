@@ -3,11 +3,9 @@ authors = ["rich-murphey <rich@murphey.org>"]
 name = "sqlx-actix-test"
 version = "0.1.0"
 edition = "2018"
-publish = false
 
 [dependencies]
-actix-http = "3.0.0-beta.1"
-actix-web = "4.0.0-beta.1"
+actix-web = "3.3.2"
 anyhow = "1.0.38"
 dotenv = "0.15.0"
 env_logger = "0.8.2"
@@ -16,7 +14,7 @@ log = "0.4.13"
 num_cpus = "1.13.0"
 serde = { version = "1.0.120", features = ["derive"] }
 serde_json = { version = "1.0.61", features = ["raw_value"] }
-sqlx = { git = "https://github.com/launchbadge/sqlx", features = [ "postgres", "runtime-actix-rustls", "json", "chrono" ]}
+sqlx = { version = "0.4.2", features = [ "postgres", "runtime-actix-rustls" ]}
+sqlx-actix-streaming = { path = "..", features = ["macros", "runtime-actix-rustls"] }
 sys-info = "0.7.0"
 thiserror = "1.0.23"
-sqlx-actix-streaming = { path = "..", features = ["macros"] }
