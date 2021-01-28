@@ -6,15 +6,12 @@ response body. For a very large response body (megabytes or larger)
 this can significantly reduce latency compared to buffering the entire
 response before sending.
 
-In the /widgets HTTP API method:
+In the /widgets HTTP API method below:
 
 * sqlx::query_as!().fetch() is a borrowed stream of WidgetRecords.
 * RowStream::gen() converts it to an owned stream of WidgetRecords.
 * ByteStream::json_array() converts it to a text stream of a json array.
 * HttpResponse.streaming() streams it to the client.
-
-See example/src/widgets.rs for details of this method, as well as,
-other variations in the format of the response and the kind of record.
 
 ````rust
 #[derive(Serialize, FromRow)]
@@ -75,3 +72,5 @@ The output of `curl -s -H 'Content-Type: application/json' -d '{"offset":0,"limi
 ]
 ````
 
+See example/src/widgets.rs for more details, as well as, other
+variations in json array or object responses and kinds of records.
