@@ -6,7 +6,7 @@ response body. For a very large response body (megabytes or larger)
 this can significantly reduce latency compared to buffering the entire
 response before sending.
 
-In the /widgets HTTP API method below:
+In the /widgets HTTP method from [example/src/widgets.rs](example/src/widgets.rs) below:
 
 * sqlx::query_as!().fetch() is a stream of WidgetRecords that borrows
   a database connection.
@@ -83,5 +83,5 @@ The output of `curl -s -H 'Content-Type: application/json' -d '{"offset":0,"limi
 ]
 ````
 
-See example/src/widgets.rs for more details. It also shows variations
+See [example/src/widgets.rs](example/src/widgets.rs) for more details. It also shows variations
 in json array vs object format and variations in the kinds of records.
