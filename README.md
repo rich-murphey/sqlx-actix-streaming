@@ -49,7 +49,7 @@ pub async fn widgets(
                             .fetch(pool)
                     }
                 ),
-                |buf: &mut BytesWriter, record| {
+                |buf: &mut BytesWriter, record: &WidgetRec| {
                     serde_json::to_writer(buf, record)
                         .map_err(error::ErrorInternalServerError)
                 },
