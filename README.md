@@ -83,5 +83,5 @@ The output of `curl -s -H 'Content-Type: application/json' -d '{"offset":0,"limi
 ]
 ````
 
-See example/src/widgets.rs for more details, as well as, other
-variations in json array or object responses and kinds of records.
+See example/src/widgets.rs for more details. It also shows variations
+in json array vs object format and variations in the kinds of records.
