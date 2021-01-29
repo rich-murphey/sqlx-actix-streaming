@@ -41,7 +41,7 @@ pub async fn widgets(
                     pool.as_ref().clone(),
                     |pool| {
                         sqlx::query_as!(
-                            WidgetRec,
+                            WidgetRecord,
                             "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
                             params.limit,
                             params.offset
@@ -49,7 +49,7 @@ pub async fn widgets(
                             .fetch(pool)
                     }
                 ),
-                |buf: &mut BytesWriter, record: &WidgetRec| {
+                |buf: &mut BytesWriter, record: &WidgetRecord| {
                     serde_json::to_writer(buf, record)
                         .map_err(error::ErrorInternalServerError)
                 },
