@@ -14,9 +14,9 @@ In the /widgets HTTP method from [example/src/widgets.rs](example/src/widgets.rs
 * ByteStream::pin() converts it to a json text stream.
 * HttpResponse.streaming() streams it to the client.
 
-Note the two closures.  The first closure generates the stream of
+Note the two closures.  The first closure generates a stream of
 WidgetRecords.  The second closure converts an individual
-WidgetRecords to json text using serde.  ByteStream wraps them in json
+WidgetRecord into json text using serde.  ByteStream wraps them in json
 array syntax ('[', ',' and ']') by default, though this is
 configurable.
 
@@ -83,5 +83,6 @@ The output of `curl -s -H 'Content-Type: application/json' -d '{"offset":0,"limi
 ]
 ````
 
-See [example/src/widgets.rs](example/src/widgets.rs) for more details. It also shows variations
-in json array vs object format and variations in the kinds of records.
+See [example/src/widgets.rs](example/src/widgets.rs) for more
+details. It also shows variations in json array vs object format and
+variations in the kinds of records.
