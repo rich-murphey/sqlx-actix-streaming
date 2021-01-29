@@ -14,10 +14,10 @@ In the /widgets HTTP API method below:
 * ByteStream::pin() converts it to a json text stream.
 * HttpResponse.streaming() streams it to the client.
 
-Note the two closures.  The first generates the stream of
+Note the two closures.  The first closure generates the stream of
 WidgetRecords.  The second closure converts an individual
 WidgetRecords to json text using serde.  ByteStream wraps them in json
-array syntax ('[', ',' and ']') by default, though they are
+array syntax ('[', ',' and ']') by default, though this is
 configurable.
 
 ````rust
