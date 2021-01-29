@@ -23,7 +23,7 @@ where
     DB: sqlx::Database,
 {
     #[allow(dead_code)]
-    pub fn gen<F>(pool: Pool<DB>, f: F) -> Self
+    pub fn pin<F>(pool: Pool<DB>, f: F) -> Self
     where
         F: for<'this> FnOnce(
             &'this <Box<Pool<DB>> as ::core::ops::Deref>::Target,
@@ -62,7 +62,7 @@ where
     DB: sqlx::Database,
 {
     #[allow(dead_code)]
-    pub fn gen<S, F>(pool: Pool<DB>, sql: S, f: F) -> Self
+    pub fn pin<S, F>(pool: Pool<DB>, sql: S, f: F) -> Self
     where
         S: ToString,
         F: for<'this> FnOnce(

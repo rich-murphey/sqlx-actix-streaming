@@ -8,7 +8,7 @@ macro_rules! query_stream [
         $sql:literal,
         $( $arg:expr ),*
     ) => ({
-        RowStream::gen(
+        RowStream::pin(
             $pool,
             |pool| {
                 sqlx::query(sql)
@@ -23,7 +23,7 @@ macro_rules! query_stream [
         $sql:expr,
         $( $arg:expr ),*
     ) => ({
-        RowWStmtStream::gen(
+        RowWStmtStream::pin(
             $pool,
             $sql,
             |pool,sql| {
@@ -43,7 +43,7 @@ macro_rules! query_as_stream [
         $sql:literal,
         $( $arg:expr ),*
     ) => ({
-        RowWStmtStream::gen(
+        RowWStmtStream::pin(
             $pool,
             $sql.to_string(),
             |pool,_sql| {
@@ -62,7 +62,7 @@ macro_rules! query_as_stream [
         $sql:expr,
         $( $arg:expr ),*
     ) => ({
-        RowWStmtStream::gen(
+        RowWStmtStream::pin(
             $pool,
             $sql,
             |pool,sql| {
@@ -84,7 +84,7 @@ macro_rules! query_as_byte_stream [
         $( $arg:expr ),*
     ) => ({
         ByteStream::pin(
-            RowStream::gen(
+            RowStream::pin(
                 $pool,
                 |pool| {
                     sqlx::query_as!(
@@ -106,7 +106,7 @@ macro_rules! query_as_byte_stream [
         $( $arg:expr ),*
     ) => ({
         ByteStream::pin(
-            RowWStmtStream::gen(
+            RowWStmtStream::pin(
                 $pool,
                 $sql,
                 |pool,sql| {
@@ -129,7 +129,7 @@ macro_rules! query_byte_stream [
         $( $arg:expr ),*
     ) => ({
         ByteStream::pin(
-            RowStream::gen(
+            RowStream::pin(
                 $pool,
                 |pool| {
                     sqlx::query!(
@@ -149,7 +149,7 @@ macro_rules! query_byte_stream [
         $( $arg:expr ),*
     ) => ({
         ByteStream::pin(
-            RowWStmtStream::gen(
+            RowWStmtStream::pin(
                 $pool,
                 $sql,
                 |pool,sql| {

@@ -24,6 +24,36 @@ pub struct WidgetRec2<'a> {
     pub name: &'a str,
     pub description: &'a str,
 }
+#[post("/widgets5")]
+pub async fn widgets5(
+    web::Json(params): web::Json<WidgetParams>,
+    pool: web::Data<PgPool>,
+) -> HttpResponse
+{
+    HttpResponse::Ok()
+        .content_type("application/json")
+        .streaming(
+            ByteStream::pin(
+                RowStream::pin(
+                    pool.as_ref().clone(),
+                    |pool| {
+                        sqlx::query_as!(
+                            WidgetRec,
+                            "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
+                            params.limit,
+                            params.offset
+                        )
+                            .fetch(pool)
+                    }
+                ),
+                |buf: &mut BytesWriter, record| {
+                    serde_json::to_writer(buf, record)
+                        .map_err(error::ErrorInternalServerError)
+                },
+            )
+        )
+}
+
 #[post("/widgets4")]
 pub async fn widgets4(
     web::Json(params): web::Json<WidgetParams>,
@@ -32,7 +62,7 @@ pub async fn widgets4(
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(ByteStream::pin(
-            RowWStmtStream::gen(
+            RowWStmtStream::pin(
                 pool.as_ref().clone(),
                 "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
                 |pool, sql| {
@@ -79,7 +109,7 @@ pub async fn widgets2(
 ) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("application/json")
-        .streaming(ByteStream::json_array(RowStream::gen(
+        .streaming(ByteStream::json_array(RowStream::pin(
             pool.as_ref().clone(),
             |pool| {
                 sqlx::query_as!(
@@ -99,7 +129,7 @@ pub async fn widgets3(
 ) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("application/json")
-        .streaming(ByteStream::json_array(RowWStmtStream::gen(
+        .streaming(ByteStream::json_array(RowWStmtStream::pin(
             pool.as_ref().clone(),
             "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
             |pool, sql| {

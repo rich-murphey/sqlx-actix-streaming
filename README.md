@@ -1,17 +1,24 @@
 # sqlx-actix-streaming
-Stream sqlx database query results to an actix HTTP (streaming) response body.
+Stream sqlx database query results via an actix-web HTTP response.
 
-In the example below, a sqlx query response is streamed as an HTTP
+In the example below, a SQL query result is streamed via an HTTP
 response body. For a very large response body (megabytes or larger)
 this can significantly reduce latency compared to buffering the entire
 response before sending.
 
 In the /widgets HTTP API method below:
 
-* sqlx::query_as!().fetch() is a borrowed stream of WidgetRecords.
-* RowStream::gen() converts it to an owned stream of WidgetRecords.
-* ByteStream::json_array() converts it to a text stream of a json array.
+* sqlx::query_as!().fetch() is a stream of WidgetRecords that borrows
+  a database connection.
+* RowStream::pin() wraps it with an owned database connection.
+* ByteStream::pin() converts it to a json text stream.
 * HttpResponse.streaming() streams it to the client.
+
+Note the two closures.  The first generates the stream of
+WidgetRecords.  The second closure converts an individual
+WidgetRecords to json text using serde.  ByteStream wraps them in json
+array syntax ('[', ',' and ']') by default, though they are
+configurable.
 
 ````rust
 #[derive(Serialize, FromRow)]
@@ -29,8 +36,8 @@ pub async fn widgets(
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(
-            ByteStream::json_array(
-                RowStream::gen(
+            ByteStream::pin(
+                RowStream::pin(
                     pool.as_ref().clone(),
                     |pool| {
                         sqlx::query_as!(
@@ -40,8 +47,12 @@ pub async fn widgets(
                             params.offset
                         )
                             .fetch(pool)
-                    },
-                )
+                    }
+                ),
+                |buf: &mut BytesWriter, record| {
+                    serde_json::to_writer(buf, record)
+                        .map_err(error::ErrorInternalServerError)
+                },
             )
         )
 }
