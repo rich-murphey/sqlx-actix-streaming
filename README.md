@@ -58,7 +58,8 @@ pub async fn widgets(
 }
 ````
 
-The output of `curl -s -H 'Content-Type: application/json' -d '{"offset":0,"limit":100}' http://localhost:8080/widgets |jq` is:
+To test this, invoke the web server using `cargo run`, and while that
+is running, query the above method, for example `curl -s -H 'Content-Type: application/json' -d '{"offset":0,"limit":100}' http://localhost:8080/widgets |jq`. The output is:
 
 ````json
 [
