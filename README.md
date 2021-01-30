@@ -17,7 +17,7 @@ In the /widgets HTTP method from [example/src/widgets.rs](example/src/widgets.rs
 Note the two closures.  The first closure generates a stream of
 WidgetRecords.  The second closure converts an individual
 WidgetRecord into json text using serde.  ByteStream wraps them in json
-array syntax ('[', ',' and ']') by default, though this is
+array syntax, using '[', ',' and ']' by default, though this is
 configurable.
 
 ````rust
