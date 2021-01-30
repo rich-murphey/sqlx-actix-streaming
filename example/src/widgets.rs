@@ -4,7 +4,7 @@ use sqlx::{postgres::*, prelude::*};
 use sqlx_actix_streaming::*;
 
 #[derive(Serialize, FromRow)]
-pub struct WidgetRec {
+pub struct WidgetRecord {
     pub id: i64,
     pub serial: i64,
     pub name: String,
@@ -18,39 +18,38 @@ pub struct WidgetParams {
 
 // NOTE: this is the most efficient method. It does not clone strings.
 #[derive(Serialize, FromRow)]
-pub struct WidgetRec2<'a> {
+pub struct WidgetRecord2<'a> {
     pub id: i64,
     pub serial: i64,
     pub name: &'a str,
     pub description: &'a str,
 }
-#[post("/widgets5")]
-pub async fn widgets5(
+#[post("/widgets")]
+pub async fn widgets(
     web::Json(params): web::Json<WidgetParams>,
     pool: web::Data<PgPool>,
-) -> HttpResponse
-{
+) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(
+            // this ByteStream is a stream of a JSON array of WidgetRecords
             ByteStream::pin(
-                RowStream::pin(
-                    pool.as_ref().clone(),
-                    |pool| {
-                        sqlx::query_as!(
-                            WidgetRec,
-                            "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-                            params.limit,
-                            params.offset
-                        )
-                            .fetch(pool)
-                    }
-                ),
-                |buf: &mut BytesWriter, record| {
-                    serde_json::to_writer(buf, record)
-                        .map_err(error::ErrorInternalServerError)
+                // this RowStream is stream of WidgetRecords that owns Pool
+                RowStream::pin(pool.as_ref().clone(), |pool| {
+                    // this is a a stream of WidgetRecords that borrows Pool
+                    sqlx::query_as!(
+                        WidgetRecord,
+                        "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
+                        params.limit,
+                        params.offset
+                    )
+                    .fetch(pool)
+                }),
+                |buf: &mut BytesWriter, record: &WidgetRecord| {
+                    // this writes a WidgetRecords as JSON text to the output buffer
+                    serde_json::to_writer(buf, record).map_err(error::ErrorInternalServerError)
                 },
-            )
+            ),
         )
 }
 
@@ -75,25 +74,25 @@ pub async fn widgets4(
             |buf: &mut BytesWriter, row| {
                 serde_json::to_writer(
                     buf,
-                    &WidgetRec2::from_row(row).map_err(error::ErrorInternalServerError)?,
+                    &WidgetRecord2::from_row(row).map_err(error::ErrorInternalServerError)?,
                 )
                 .map_err(error::ErrorInternalServerError)
             },
         ))
 }
 
-#[post("/widgets")]
-pub async fn widgets(
+#[post("/widgets5")]
+pub async fn widgets5(
     web::Json(params): web::Json<WidgetParams>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(query_as_byte_stream!(
-            WidgetRec,
+            WidgetRecord,
             pool.as_ref().clone(),
             "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-            |buf: &mut BytesWriter, rec: &WidgetRec| {
+            |buf: &mut BytesWriter, rec: &WidgetRecord| {
                 serde_json::to_writer(buf, rec).map_err(error::ErrorInternalServerError)
             },
             params.limit,
@@ -113,7 +112,7 @@ pub async fn widgets2(
             pool.as_ref().clone(),
             |pool| {
                 sqlx::query_as!(
-                    WidgetRec,
+                    WidgetRecord,
                     "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
                     params.limit,
                     params.offset
@@ -133,7 +132,7 @@ pub async fn widgets3(
             pool.as_ref().clone(),
             "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
             |pool, sql| {
-                sqlx::query_as::<Postgres, WidgetRec>(sql)
+                sqlx::query_as::<Postgres, WidgetRecord>(sql)
                     .bind(params.limit)
                     .bind(params.offset)
                     .fetch(pool)
@@ -150,10 +149,10 @@ pub async fn widget_table(
         .content_type("application/json")
         .streaming(
             query_as_byte_stream!(
-                WidgetRec,
+                WidgetRecord,
                 pool.as_ref().clone(),
                 "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-                |buf: &mut BytesWriter, rec: &WidgetRec| {
+                |buf: &mut BytesWriter, rec: &WidgetRecord| {
                     write!(
                         &mut *buf,
                         r#"[{}, {}, "{}", "{}"]"#,
@@ -186,7 +185,7 @@ pub async fn widget_table2(
                 |buf: &mut BytesWriter, row| {
                     serde_json::to_writer(
                         buf,
-                        &WidgetRec2::from_row(row).map_err(error::ErrorInternalServerError)?,
+                        &WidgetRecord2::from_row(row).map_err(error::ErrorInternalServerError)?,
                     )
                     .map_err(error::ErrorInternalServerError)
                 },
