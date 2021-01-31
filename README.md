@@ -1,5 +1,5 @@
 # sqlx-actix-streaming
-Stream sqlx database query results via an actix-web HTTP response.
+Stream [sqlx](https://github.com/launchbadge/sqlx) database query results via an [actix-web](https://actix.rs/) HTTP response.
 
 In the example below, a SQL query result is streamed via an HTTP
 response body. For a very large response body (megabytes or larger)
@@ -8,11 +8,11 @@ response before sending.
 
 In the /widgets HTTP method from [example/src/widgets.rs](example/src/widgets.rs) below:
 
-* sqlx::query_as!().fetch() is a stream of WidgetRecords that borrows
+* [sqlx::query_as!().fetch()](https://docs.rs/sqlx/0.4.2/sqlx/macro.query_as.html) is a stream of WidgetRecords that borrows
   a database connection.
 * RowStream::pin() wraps it with an owned database connection.
 * ByteStream::pin() converts it to a json text stream.
-* HttpResponse.streaming() streams it to the client.
+* [HttpResponse.streaming()](https://docs.rs/actix-web/3.3.2/actix_web/dev/struct.HttpResponseBuilder.html#method.streaming) streams it to the client.
 
 Note the two closures.  The first closure generates a stream of
 WidgetRecords.  The second closure converts an individual
@@ -87,3 +87,4 @@ is running, query the above method, for example `curl -s -H 'Content-Type: appli
 See [example/src/widgets.rs](example/src/widgets.rs) for more
 details. It also shows variations in json array vs object format and
 variations in the kinds of records.
+
