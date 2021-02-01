@@ -17,8 +17,7 @@ In the /widgets HTTP method from [example/src/widgets.rs](example/src/widgets.rs
 Note the two closures.  The first closure generates a stream of
 WidgetRecords.  The second closure converts an individual
 WidgetRecord into json text using serde.  ByteStream wraps them in json
-array syntax, using '[', ',' and ']' by default, though this is
-configurable.
+array syntax, using '[', ',' and ']' by default.
 
 ````rust
 #[derive(Serialize, FromRow)]
@@ -58,8 +57,8 @@ pub async fn widgets(
 }
 ````
 
-To test this, invoke the web server using `cargo run`, and while that
-is running, query the above method, for example `curl -s -H 'Content-Type: application/json' -d '{"offset":0,"limit":100}' http://localhost:8080/widgets |jq`. The output is:
+To test this, invoke the web server using `cargo run`, and while it
+is running, query the HTTP method, for example `curl -s -H 'Content-Type: application/json' -d '{"offset":0,"limit":100}' http://localhost:8080/widgets |jq`. The output is:
 
 ````json
 [
@@ -85,6 +84,5 @@ is running, query the above method, for example `curl -s -H 'Content-Type: appli
 ````
 
 See [example/src/widgets.rs](example/src/widgets.rs) for more
-details. It also shows variations in json array vs object format and
-variations in the kinds of records.
-
+details. It also shows variations in json format (array vs object) and
+in record type (struct vs tuple).
