@@ -9,13 +9,14 @@ use futures::{
 };
 pub use std::io::Write;
 use std::pin::Pin;
-
 enum ByteStreamState {
     New,
     Started,
-    Running,
+    NonEmpty,
     Finished,
 }
+#[cfg(feature = "logging")]
+use log::*;
 
 pub struct ByteStream<T, St>
 where
@@ -139,12 +140,14 @@ where
             match self.inner.poll_next_unpin(cx) {
                 Ready(Some(Ok(record))) => {
                     match self.state {
-                        Started => self.state = Running,
-                        Running => self.put_separator(),
+                        Started => self.state = NonEmpty,
+                        NonEmpty => self.put_separator(),
                         _ => (),
                     };
                     let initial_len = self.buf.0.len();
                     if let Err(e) = self.write_record(&record) {
+                        #[cfg(feature = "logging")]
+                        error!("write_record: {:?}", e);
                         return Ready(Some(Err(ErrorInternalServerError(e))));
                     }
                     self.adjust_item_size(initial_len);
@@ -154,7 +157,11 @@ where
                         return Ready(Some(Ok(self.get_bytes())));
                     }
                 }
-                Ready(Some(Err(e))) => return Ready(Some(Err(ErrorInternalServerError(e)))),
+                Ready(Some(Err(e))) => {
+                    #[cfg(feature = "logging")]
+                    error!("poll_next: {:?}", e);
+                    return Ready(Some(Err(ErrorInternalServerError(e))))
+                },
                 Ready(None) => {
                     self.state = ByteStreamState::Finished;
                     self.put_suffix();
