@@ -28,6 +28,7 @@ where
     prefix: Vec<u8>,
     separator: Vec<u8>,
     suffix: Vec<u8>,
+    buf: BytesWriter,
     f: Box<dyn FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>>,
 }
 
@@ -35,6 +36,8 @@ impl<T, St> ByteStream<T, St>
 where
     St: Stream<Item = Result<T, sqlx::Error>>,
 {
+    const DEFAULT_BUF_SIZE: usize = 4096; 
+
     #[allow(dead_code)]
     #[inline]
     pub fn pin<F>(inner: St, f: F) -> Self
@@ -48,14 +51,16 @@ where
         inner: Pin<Box<St>>,
         f: Box<dyn FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>>,
     ) -> Self {
+        // TODO: this should be a builder.
         Self {
             inner,
             state: ByteStreamState::New,
-            buf_size: 2048,
+            buf_size: Self::DEFAULT_BUF_SIZE,
             item_size: 0,
             prefix: "[".as_bytes().to_vec(),
             separator: ",".as_bytes().to_vec(),
             suffix: "]".as_bytes().to_vec(),
+            buf: BytesWriter(BytesMut::with_capacity(Self::DEFAULT_BUF_SIZE)),
             f,
         }
     }
@@ -93,19 +98,41 @@ where
         })
     }
     #[inline]
-    fn start(&mut self, buf: &mut BytesWriter) {
-        self.state = ByteStreamState::Started;
-        buf.0.extend_from_slice(&self.prefix);
+    fn put_prefix(&mut self) {
+        self.buf.0.extend_from_slice(&self.prefix);
     }
     #[inline]
-    fn put_separator(&mut self, buf: &mut BytesWriter) {
-        buf.0.extend_from_slice(&self.separator);
+    fn put_separator(&mut self) {
+        self.buf.0.extend_from_slice(&self.separator);
     }
     #[inline]
-    fn finish(&mut self, mut buf: BytesWriter) -> Bytes {
-        self.state = ByteStreamState::Finished;
-        buf.0.extend_from_slice(&self.suffix);
-        buf.0.freeze()
+    fn put_suffix(&mut self) {
+        self.buf.0.extend_from_slice(&self.suffix);
+    }
+    #[inline]
+    fn get_bytes(&mut self) -> Bytes {
+        self.buf.0.split().freeze()
+    }
+    #[inline]
+    fn reserve(&mut self) {
+        self.buf.0.reserve(self.buf_size);
+    }
+    #[inline]
+    fn set_item_size(&mut self, item_size: usize) {
+        if self.item_size < item_size {
+            self.item_size = item_size;
+            while self.buf_size < self.item_size * 5 / 4 {
+                self.buf_size <<= 1;
+            }
+        }
+    }
+    #[inline]
+    fn capacity(&self) {
+        self.buf.0.capacity() - self.buf.0.len()
+    }
+    #[inline]
+    fn write_record(&mut self, record: &T) -> Result<(), actix_web::Error> {
+        (self.f)(&mut self.buf, record)
     }
 }
 
@@ -118,50 +145,44 @@ where
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         use ByteStreamState::*;
         use Poll::*;
-        let mut buf = BytesWriter(BytesMut::with_capacity(self.buf_size));
-        match self.state {
-            New => self.start(&mut buf),
-            Finished => return Ready(None),
-            _ => (),
+        if let Finished = self.state {
+            return Ready(None);
+        }
+        self.reserve();
+        if let New = self.state {
+            self.state = ByteStreamState::Started;
+            self.put_prefix();
         }
         loop {
             match self.inner.poll_next_unpin(cx) {
                 Ready(Some(Ok(record))) => {
                     match self.state {
                         Started => self.state = Running,
-                        Running => self.put_separator(&mut buf),
+                        Running => self.put_separator(),
                         _ => (),
                     };
-                    let initial_len = buf.0.len();
-                    if let Err(e) = (self.f)(&mut buf, &record) {
+                    let initial_len = self.buf.0.len();
+                    if let Err(e) = self.write_record(&record) {
                         return Ready(Some(Err(ErrorInternalServerError(e))));
                     }
-                    let item_size = buf.0.len() - initial_len;
-                    if self.item_size < item_size {
-                        self.item_size = item_size;
-                        while self.buf_size < self.item_size * 5 / 4 {
-                            self.buf_size <<= 1;
-                        }
-                    }
-                    if self.item_size > (buf.0.capacity() - buf.0.len()) {
-                        return Ready(Some(Ok(buf.0.freeze())));
+                    self.set_item_size(self.buf.0.len() - initial_len);
+                    if self.capacity() < self.item_size {
+                        return Ready(Some(Ok(self.get_bytes())));
                     } else {
                         continue;
                     }
                 }
                 Ready(Some(Err(e))) => return Ready(Some(Err(ErrorInternalServerError(e)))),
                 Ready(None) => {
-                    return if buf.0.is_empty() {
-                        Ready(None)
-                    } else {
-                        Ready(Some(Ok(self.finish(buf))))
-                    }
+                    self.state = ByteStreamState::Finished;
+                    self.put_suffix();
+                    return Ready(Some(Ok(self.get_bytes())));
                 }
                 Pending => {
-                    return if buf.0.is_empty() {
-                        Pending
+                    if self.buf.0.is_empty() {
+                        return Pending;
                     } else {
-                        Ready(Some(Ok(buf.0.freeze())))
+                        return Ready(Some(Ok(self.get_bytes())));
                     }
                 }
             }
