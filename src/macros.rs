@@ -1,5 +1,3 @@
-pub use std::io::Write;
-
 #[macro_export]
 macro_rules! query_stream [
     (
