@@ -17,4 +17,4 @@ ouroboros = "0"
 serde = "1"
 serde_json = "1"
 actix-web = "4.0.0-beta.1"
-sqlx = { git = "https://github.com/lumeohq/sqlx", branch = "tokio-1.0", features = [ "postgres", "json", "chrono", "runtime-actix-rustls" ]}
+sqlx = { git = "https://github.com/launchbadge/sqlx", features = [ "postgres", "json", "chrono", "runtime-actix-rustls" ]}
