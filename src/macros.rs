@@ -1,6 +1,3 @@
-// Copyright (c) 2020 Carey Richard Murphey.
-pub use std::io::Write;
-
 #[macro_export]
 macro_rules! query_stream [
     (
@@ -8,7 +5,7 @@ macro_rules! query_stream [
         $sql:literal,
         $( $arg:expr ),*
     ) => ({
-        RowStream::pin(
+        $crate::RowStream::pin(
             $pool,
             |pool| {
                 sqlx::query(sql)
@@ -23,7 +20,7 @@ macro_rules! query_stream [
         $sql:expr,
         $( $arg:expr ),*
     ) => ({
-        RowWStmtStream::pin(
+        $crate::RowWStmtStream::pin(
             $pool,
             $sql,
             |pool,sql| {
@@ -43,7 +40,7 @@ macro_rules! query_as_stream [
         $sql:literal,
         $( $arg:expr ),*
     ) => ({
-        RowWStmtStream::pin(
+        $crate::RowWStmtStream::pin(
             $pool,
             $sql.to_string(),
             |pool,_sql| {
@@ -62,7 +59,7 @@ macro_rules! query_as_stream [
         $sql:expr,
         $( $arg:expr ),*
     ) => ({
-        RowWStmtStream::pin(
+        $crate::RowWStmtStream::pin(
             $pool,
             $sql,
             |pool,sql| {
@@ -83,8 +80,8 @@ macro_rules! query_as_byte_stream [
         $fn:expr,
         $( $arg:expr ),*
     ) => ({
-        ByteStream::pin(
-            RowStream::pin(
+        $crate::ByteStream::pin(
+            $crate::RowStream::pin(
                 $pool,
                 |pool| {
                     sqlx::query_as!(
@@ -105,8 +102,8 @@ macro_rules! query_as_byte_stream [
         $fn:expr,
         $( $arg:expr ),*
     ) => ({
-        ByteStream::pin(
-            RowWStmtStream::pin(
+        $crate::ByteStream::pin(
+            $crate::RowWStmtStream::pin(
                 $pool,
                 $sql,
                 |pool,sql| {
@@ -128,8 +125,8 @@ macro_rules! query_byte_stream [
         $fn:expr,
         $( $arg:expr ),*
     ) => ({
-        ByteStream::pin(
-            RowStream::pin(
+        $crate::ByteStream::pin(
+            $crate::RowStream::pin(
                 $pool,
                 |pool| {
                     sqlx::query!(
@@ -148,8 +145,8 @@ macro_rules! query_byte_stream [
         $fn:expr,
         $( $arg:expr ),*
     ) => ({
-        ByteStream::pin(
-            RowWStmtStream::pin(
+        $crate::ByteStream::pin(
+            $crate::RowWStmtStream::pin(
                 $pool,
                 $sql,
                 |pool,sql| {
