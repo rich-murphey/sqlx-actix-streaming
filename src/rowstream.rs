@@ -23,14 +23,14 @@ where
     DB: sqlx::Database,
 {
     #[allow(dead_code)]
-    pub fn pin<F>(pool: Pool<DB>, f: F) -> Self
+    pub fn pin<F>(pool: &Pool<DB>, f: F) -> Self
     where
         F: for<'this> FnOnce(
             &'this <Box<Pool<DB>> as ::core::ops::Deref>::Target,
         ) -> BoxStream<'this, Result<T, sqlx::Error>>,
     {
         RowStreamBuilder {
-            pool: Box::new(pool),
+            pool: Box::new(pool.clone()),
             inner_builder: f,
         }
         .build()
@@ -63,7 +63,7 @@ where
     DB: sqlx::Database,
 {
     #[allow(dead_code)]
-    pub fn pin<S, F>(pool: Pool<DB>, sql: S, f: F) -> Self
+    pub fn pin<S, F>(pool: &Pool<DB>, sql: S, f: F) -> Self
     where
         S: ToString,
         F: for<'this> FnOnce(
@@ -72,7 +72,7 @@ where
         ) -> BoxStream<'this, Result<T, sqlx::Error>>,
     {
         RowWStmtStreamBuilder {
-            pool: Box::new(pool),
+            pool: Box::new(pool.clone()),
             sql: Box::new(sql.to_string()),
             inner_builder: f,
         }

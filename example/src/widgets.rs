@@ -35,7 +35,7 @@ pub async fn widgets(
             // this ByteStream is a stream of a JSON array of WidgetRecords
             ByteStream::pin(
                 // this RowStream is stream of WidgetRecords that owns Pool
-                RowStream::pin(pool.as_ref().clone(), |pool| {
+                RowStream::pin(pool.as_ref(), |pool| {
                     // this is a a stream of WidgetRecords that borrows Pool
                     sqlx::query_as!(
                         WidgetRecord,
@@ -62,7 +62,7 @@ pub async fn widgets4(
         .content_type("application/json")
         .streaming(ByteStream::pin(
             RowWStmtStream::pin(
-                pool.as_ref().clone(),
+                pool.as_ref(),
                 "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
                 |pool, sql| {
                     sqlx::query(sql)
@@ -90,7 +90,7 @@ pub async fn widgets5(
         .content_type("application/json")
         .streaming(query_as_byte_stream!(
             WidgetRecord,
-            pool.as_ref().clone(),
+            pool.as_ref(),
             "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
             |buf: &mut BytesWriter, rec: &WidgetRecord| {
                 serde_json::to_writer(buf, rec).map_err(ErrorInternalServerError)
@@ -110,7 +110,7 @@ pub async fn widget_table(
         .streaming(
             query_as_byte_stream!(
                 WidgetRecord,
-                pool.as_ref().clone(),
+                pool.as_ref(),
                 "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
                 |buf: &mut BytesWriter, rec: &WidgetRecord| {
                     write!(
@@ -140,7 +140,7 @@ pub async fn widget_table2(
         .content_type("application/json")
         .streaming(
             query_byte_stream!(
-                pool.as_ref().clone(),
+                pool.as_ref(),
                 "SELECT * FROM widgets LIMIT $1 OFFSET $2 ".to_string(),
                 |buf: &mut BytesWriter, row| {
                     serde_json::to_writer(
@@ -169,7 +169,7 @@ pub async fn widgetrows(
         .content_type("application/json")
         .streaming(
             query_byte_stream!(
-                pool.as_ref().clone(),
+                pool.as_ref(),
                 "SELECT * FROM widgets LIMIT $1 OFFSET $2 ".to_string(),
                 |buf: &mut BytesWriter, row| {
                     serde_json::to_writer(
@@ -200,7 +200,7 @@ pub async fn widgetrows2(
         .streaming(
             query_as_byte_stream!(
                 WidgetTuple2,
-                pool.as_ref().clone(),
+                pool.as_ref(),
                 sql,
                 |buf: &mut BytesWriter, rec: &WidgetTuple2| {
                     serde_json::to_writer(buf, rec).map_err(ErrorInternalServerError)
