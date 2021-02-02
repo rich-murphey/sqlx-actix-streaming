@@ -1,4 +1,4 @@
-use actix_web::*;
+use actix_web::{error::ErrorInternalServerError, *};
 use serde::*;
 use sqlx::{postgres::*, prelude::*};
 use sqlx_actix_streaming::*;
@@ -47,7 +47,7 @@ pub async fn widgets(
                 }),
                 |buf: &mut BytesWriter, record: &WidgetRecord| {
                     // this writes a WidgetRecords as JSON text to the output buffer
-                    serde_json::to_writer(buf, record).map_err(error::ErrorInternalServerError)
+                    serde_json::to_writer(buf, record).map_err(ErrorInternalServerError)
                 },
             ),
         )
@@ -74,9 +74,9 @@ pub async fn widgets4(
             |buf: &mut BytesWriter, row| {
                 serde_json::to_writer(
                     buf,
-                    &WidgetRecord2::from_row(row).map_err(error::ErrorInternalServerError)?,
+                    &WidgetRecord2::from_row(row).map_err(ErrorInternalServerError)?,
                 )
-                .map_err(error::ErrorInternalServerError)
+                .map_err(ErrorInternalServerError)
             },
         ))
 }
@@ -93,7 +93,7 @@ pub async fn widgets5(
             pool.as_ref().clone(),
             "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
             |buf: &mut BytesWriter, rec: &WidgetRecord| {
-                serde_json::to_writer(buf, rec).map_err(error::ErrorInternalServerError)
+                serde_json::to_writer(buf, rec).map_err(ErrorInternalServerError)
             },
             params.limit,
             params.offset
@@ -118,7 +118,7 @@ pub async fn widget_table(
                         r#"[{}, {}, "{}", "{}"]"#,
                         rec.id, rec.serial, rec.name, rec.description,
                     )
-                    .map_err(error::ErrorInternalServerError)
+                    .map_err(ErrorInternalServerError)
                 },
                 params.limit,
                 params.offset
@@ -145,9 +145,9 @@ pub async fn widget_table2(
                 |buf: &mut BytesWriter, row| {
                     serde_json::to_writer(
                         buf,
-                        &WidgetRecord2::from_row(row).map_err(error::ErrorInternalServerError)?,
+                        &WidgetRecord2::from_row(row).map_err(ErrorInternalServerError)?,
                     )
-                    .map_err(error::ErrorInternalServerError)
+                    .map_err(ErrorInternalServerError)
                 },
                 params.limit,
                 params.offset
@@ -174,9 +174,9 @@ pub async fn widgetrows(
                 |buf: &mut BytesWriter, row| {
                     serde_json::to_writer(
                         buf,
-                        &WidgetTuple::from_row(row).map_err(error::ErrorInternalServerError)?,
+                        &WidgetTuple::from_row(row).map_err(ErrorInternalServerError)?,
                     )
-                    .map_err(error::ErrorInternalServerError)
+                    .map_err(ErrorInternalServerError)
                 },
                 params.limit,
                 params.offset
@@ -203,7 +203,7 @@ pub async fn widgetrows2(
                 pool.as_ref().clone(),
                 sql,
                 |buf: &mut BytesWriter, rec: &WidgetTuple2| {
-                    serde_json::to_writer(buf, rec).map_err(error::ErrorInternalServerError)
+                    serde_json::to_writer(buf, rec).map_err(ErrorInternalServerError)
                 },
                 params.limit,
                 params.offset
