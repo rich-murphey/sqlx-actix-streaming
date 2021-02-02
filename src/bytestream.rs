@@ -18,9 +18,10 @@ enum ByteStreamState {
 #[cfg(feature = "logging")]
 use log::*;
 
-pub struct ByteStream<T, St>
+pub struct ByteStream<T, St, F>
 where
     St: Stream<Item = Result<T, sqlx::Error>>,
+    F: FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>,
 {
     inner: Pin<Box<St>>,
     state: ByteStreamState,
@@ -30,19 +31,20 @@ where
     separator: Vec<u8>,
     suffix: Vec<u8>,
     buf: BytesWriter,
-    f: Box<dyn FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>>,
+    f: Box<F>,
 }
 
-impl<T, St> ByteStream<T, St>
+impl<T, St, F> ByteStream<T, St, F>
 where
     St: Stream<Item = Result<T, sqlx::Error>>,
+    F: FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>,
 {
     #![allow(dead_code)]
-    const DEFAULT_BUF_SIZE: usize = 4096; 
+    const DEFAULT_BUF_SIZE: usize = 2048; 
 
     pub fn new(
         inner: Pin<Box<St>>,
-        f: Box<dyn FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>>,
+        f: Box<F>,
     ) -> Self {
         // TODO: this should be a builder.
         Self {
@@ -57,9 +59,8 @@ where
             f,
         }
     }
-    pub fn pin<F>(inner: St, f: F) -> Self
-    where
-        F: 'static + FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>,
+    /// box the stream and serializer function.
+    pub fn pin(inner: St, f: F) -> Self
     {
         Self::new(Box::pin(inner), Box::new(f))
     }
@@ -79,29 +80,29 @@ where
         self.buf_size = size;
         self
     }
-    pub fn json_array(inner: St) -> Self
-    where
-        T: serde::Serialize,
-    {
-        Self::pin(inner, move |buf, t| {
-            serde_json::to_writer(buf, t).map_err(ErrorInternalServerError)
-        })
-    }
+    /// append the configured prefix to the output buffer.
     fn put_prefix(&mut self) {
         self.buf.0.extend_from_slice(&self.prefix);
     }
+    /// append the configured separator to the output buffer.
     fn put_separator(&mut self) {
         self.buf.0.extend_from_slice(&self.separator);
     }
+    /// append the configured suffix to the output buffer.
     fn put_suffix(&mut self) {
         self.buf.0.extend_from_slice(&self.suffix);
     }
+    /// return the buffered output bytes.
     fn get_bytes(&mut self) -> Bytes {
         self.buf.0.split().freeze()
     }
+    /// ensure capacity for at least one additional item to be
+    /// inserted into the buffer.
     fn reserve(&mut self) {
         self.buf.0.reserve(self.buf_size);
     }
+    /// Make the buffer 20% larger than the largest item, and round it
+    /// up to a power of two.
     fn adjust_item_size(&mut self, inital_len: usize) {
         let item_size = self.buf.0.len() - inital_len;
         if self.item_size < item_size {
@@ -111,17 +112,21 @@ where
             }
         }
     }
+    /// return true if there is room for one more item in the buffer.
     fn has_room_for_item(&self) -> bool {
-        self.item_size <= self.buf.0.capacity() - self.buf.0.len()
+        let remaining_space = self.buf.0.capacity() - self.buf.0.len();
+        self.item_size <= remaining_space
     }
+    /// use the given closure to write a record to the output buffer.
     fn write_record(&mut self, record: &T) -> Result<(), actix_web::Error> {
         (self.f)(&mut self.buf, record)
     }
 }
 
-impl<T, St> Stream for ByteStream<T, St>
+impl<T, St, F> Stream for ByteStream<T, St, F>
 where
     St: Stream<Item = Result<T, sqlx::Error>>,
+    F: FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>,
 {
     type Item = Result<Bytes, actix_web::Error>;
 

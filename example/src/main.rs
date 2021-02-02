@@ -38,8 +38,6 @@ async fn main() -> anyhow::Result<()> {
             .wrap(middleware::Logger::default())
             .app_data(web::Data::new(pool.clone()))
             .service(widgets::widgets)
-            .service(widgets::widgets2)
-            .service(widgets::widgets3)
             .service(widgets::widgets4)
             .service(widgets::widget_table)
             .service(widgets::widget_table2)

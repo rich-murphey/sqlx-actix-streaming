@@ -100,46 +100,6 @@ pub async fn widgets5(
         ))
 }
 
-// note: no macros used here.
-#[post("/widgets2")]
-pub async fn widgets2(
-    web::Json(params): web::Json<WidgetParams>,
-    pool: web::Data<PgPool>,
-) -> HttpResponse {
-    HttpResponse::Ok()
-        .content_type("application/json")
-        .streaming(ByteStream::json_array(RowStream::pin(
-            pool.as_ref().clone(),
-            |pool| {
-                sqlx::query_as!(
-                    WidgetRecord,
-                    "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-                    params.limit,
-                    params.offset
-                )
-                .fetch(pool)
-            },
-        )))
-}
-#[post("/widgets3")]
-pub async fn widgets3(
-    web::Json(params): web::Json<WidgetParams>,
-    pool: web::Data<PgPool>,
-) -> HttpResponse {
-    HttpResponse::Ok()
-        .content_type("application/json")
-        .streaming(ByteStream::json_array(RowWStmtStream::pin(
-            pool.as_ref().clone(),
-            "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-            |pool, sql| {
-                sqlx::query_as::<Postgres, WidgetRecord>(sql)
-                    .bind(params.limit)
-                    .bind(params.offset)
-                    .fetch(pool)
-            },
-        )))
-}
-
 #[post("/widget_table")]
 pub async fn widget_table(
     web::Json(params): web::Json<WidgetParams>,
