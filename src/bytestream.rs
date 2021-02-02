@@ -3,9 +3,8 @@ use actix_web::{
     web::{Bytes, BytesMut},
 };
 use futures::{
-    Stream,
-    StreamExt,
     task::{Context, Poll},
+    Stream, StreamExt,
 };
 pub use std::io::Write;
 use std::pin::Pin;
@@ -40,12 +39,8 @@ where
     F: FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>,
 {
     #![allow(dead_code)]
-    const DEFAULT_BUF_SIZE: usize = 2048; 
-
-    pub fn new(
-        inner: Pin<Box<St>>,
-        f: Box<F>,
-    ) -> Self {
+    const DEFAULT_BUF_SIZE: usize = 2048;
+    pub fn new(inner: Pin<Box<St>>, f: Box<F>) -> Self {
         // TODO: this should be a builder.
         Self {
             inner,
@@ -60,8 +55,7 @@ where
         }
     }
     /// pin and box the stream and box the serializer function.
-    pub fn pin(inner: St, f: F) -> Self
-    {
+    pub fn pin(inner: St, f: F) -> Self {
         Self::new(Box::pin(inner), Box::new(f))
     }
     /// set the prefix for the json array. '[' by default.
@@ -169,8 +163,8 @@ where
                 Ready(Some(Err(e))) => {
                     #[cfg(feature = "logging")]
                     error!("poll_next: {:?}", e);
-                    return Ready(Some(Err(ErrorInternalServerError(e))))
-                },
+                    return Ready(Some(Err(ErrorInternalServerError(e))));
+                }
                 Ready(None) => {
                     self.state = ByteStreamState::Finished;
                     self.put_suffix();
