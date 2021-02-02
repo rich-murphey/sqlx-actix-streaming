@@ -79,28 +79,34 @@ where
         self
     }
     // append the configured prefix to the output buffer.
+    #[inline]
     fn put_prefix(&mut self) {
         self.buf.0.extend_from_slice(&self.prefix);
     }
     // append the configured separator to the output buffer.
+    #[inline]
     fn put_separator(&mut self) {
         self.buf.0.extend_from_slice(&self.separator);
     }
     // append the configured suffix to the output buffer.
+    #[inline]
     fn put_suffix(&mut self) {
         self.buf.0.extend_from_slice(&self.suffix);
     }
     // return the buffered output bytes.
+    #[inline]
     fn get_bytes(&mut self) -> Bytes {
         self.buf.0.split().freeze()
     }
     // ensure capacity for at least one additional item to be
     // inserted into the buffer.
+    #[inline]
     fn reserve(&mut self) {
         self.buf.0.reserve(self.buf_size);
     }
     // Make the buffer 20% larger than the largest item, and round it
     // up to a power of two.
+    #[inline]
     fn adjust_item_size(&mut self, inital_len: usize) {
         let item_size = self.buf.0.len() - inital_len;
         if self.item_size < item_size {
@@ -111,11 +117,13 @@ where
         }
     }
     // return true if there is room for one more item in the buffer.
+    #[inline]
     fn has_room_for_item(&self) -> bool {
         let remaining_space = self.buf.0.capacity() - self.buf.0.len();
         self.item_size <= remaining_space
     }
     // use the given closure to write a record to the output buffer.
+    #[inline]
     fn write_record(&mut self, record: &T) -> Result<(), actix_web::Error> {
         (self.f)(&mut self.buf, record)
     }
@@ -185,10 +193,12 @@ where
 pub struct BytesWriter(pub BytesMut);
 
 impl std::io::Write for BytesWriter {
+    #[inline]
     fn write(&mut self, src: &[u8]) -> std::io::Result<usize> {
         self.0.extend_from_slice(src);
         Ok(src.len())
     }
+    #[inline]
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
     }
