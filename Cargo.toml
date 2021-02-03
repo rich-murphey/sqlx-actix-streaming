@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 
 [features]
-default = []
+default = [ "sqlx/postgres", "sqlx/runtime-actix-rustls" ]
 macros = []
 logging = ["log"]
 

@@ -55,7 +55,7 @@ where
         }
     }
     /// pin and box the stream and box the serializer function.
-    pub fn pin(inner: St, f: F) -> Self {
+    pub fn make(inner: St, f: F) -> Self {
         Self::new(Box::pin(inner), Box::new(f))
     }
     /// set the prefix for the json array. '[' by default.

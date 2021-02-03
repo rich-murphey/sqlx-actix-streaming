@@ -10,8 +10,8 @@ In the /widgets HTTP method from [example/src/widgets.rs](example/src/widgets.rs
 
 * [sqlx::query_as!().fetch()](https://docs.rs/sqlx/0.4.2/sqlx/macro.query_as.html) is a stream of WidgetRecords that borrows
   a database connection.
-* RowStream::pin() wraps it with an owned database connection.
-* ByteStream::pin() converts it to a json text stream.
+* RowStream::make() wraps it with an owned database connection.
+* ByteStream::make() converts it to a json text stream.
 * [HttpResponse.streaming()](https://docs.rs/actix-web/3.3.2/actix_web/dev/struct.HttpResponseBuilder.html#method.streaming) streams it to the client.
 
 Note the two closures.  The first closure generates a stream of
@@ -36,9 +36,9 @@ pub async fn widgets(
         .content_type("application/json")
         .streaming(
             // this is a stream of a JSON array of WidgetRecords
-            ByteStream::pin(
+            ByteStream::make(
                 // this is a stream of WidgetRecords that owns Pool
-                RowStream::pin(pool.as_ref().clone(), |pool| {
+                RowStream::make(pool.as_ref(), |pool| {
                     // this is a stream of WidgetRecords that borrows Pool
                     sqlx::query_as!(
                         WidgetRecord,
