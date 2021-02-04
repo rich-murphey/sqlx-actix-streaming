@@ -98,8 +98,7 @@ where
     fn get_bytes(&mut self) -> Bytes {
         self.buf.0.split().freeze()
     }
-    // ensure capacity for at least one additional item to be
-    // inserted into the buffer.
+    // ensure capacity to write one additional item into the buffer.
     #[inline]
     fn reserve(&mut self) {
         self.buf.0.reserve(self.buf_size);
