@@ -30,7 +30,7 @@ where
     separator: Vec<u8>,
     suffix: Vec<u8>,
     buf: BytesWriter,
-    f: Box<F>,
+    serializer: Box<F>,
 }
 
 impl<T, St, F> ByteStream<T, St, F>
@@ -40,7 +40,7 @@ where
 {
     #![allow(dead_code)]
     const DEFAULT_BUF_SIZE: usize = 2048;
-    pub fn new(inner: Pin<Box<St>>, f: Box<F>) -> Self {
+    pub fn new(inner: Pin<Box<St>>, serializer: Box<F>) -> Self {
         // TODO: this should be a builder.
         Self {
             inner,
@@ -51,12 +51,12 @@ where
             separator: ",".as_bytes().to_vec(),
             suffix: "]".as_bytes().to_vec(),
             buf: BytesWriter(BytesMut::with_capacity(Self::DEFAULT_BUF_SIZE)),
-            f,
+            serializer,
         }
     }
     /// pin and box the stream and box the serializer function.
-    pub fn make(inner: St, f: F) -> Self {
-        Self::new(Box::pin(inner), Box::new(f))
+    pub fn make(inner: St, serializer: F) -> Self {
+        Self::new(Box::pin(inner), Box::new(serializer))
     }
     /// set the prefix for the json array. '[' by default.
     pub fn prefix<S: ToString>(mut self, s: S) -> Self {
@@ -125,7 +125,7 @@ where
     // use the given closure to write a record to the output buffer.
     #[inline]
     fn write_record(&mut self, record: &T) -> Result<(), actix_web::Error> {
-        (self.f)(&mut self.buf, record)
+        (self.serializer)(&mut self.buf, record)
     }
 }
 
@@ -164,9 +164,8 @@ where
                     self.adjust_item_size(initial_len);
                     if self.has_room_for_item() {
                         continue;
-                    } else {
-                        return Ready(Some(Ok(self.get_bytes())));
                     }
+                    return Ready(Some(Ok(self.get_bytes())));
                 }
                 Ready(Some(Err(e))) => {
                     #[cfg(feature = "logging")]
@@ -181,9 +180,8 @@ where
                 Pending => {
                     if self.buf.0.is_empty() {
                         return Pending;
-                    } else {
-                        return Ready(Some(Ok(self.get_bytes())));
                     }
+                    return Ready(Some(Ok(self.get_bytes())));
                 }
             }
         }
