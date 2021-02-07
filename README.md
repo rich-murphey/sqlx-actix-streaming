@@ -86,3 +86,7 @@ is running, query the HTTP method, for example `curl -s -H 'Content-Type: applic
 See [example/src/widgets.rs](example/src/widgets.rs) for more
 details. It also shows variations in json format (array vs object) and
 in record type (struct vs tuple).
+
+## Minimum Supported Rust Version
+
+Requires Rust **1.45** or newer.
