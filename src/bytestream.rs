@@ -9,10 +9,10 @@ use futures::{
 pub use std::io::Write;
 use std::pin::Pin;
 enum ByteStreamState {
-    New,
-    Started,
+    Unused,
+    Empty,
     NonEmpty,
-    Finished,
+    Done,
 }
 #[cfg(feature = "logging")]
 use log::*;
@@ -44,7 +44,7 @@ where
         // TODO: this should be a builder.
         Self {
             inner,
-            state: ByteStreamState::New,
+            state: ByteStreamState::Unused,
             buf_size: Self::DEFAULT_BUF_SIZE,
             item_size: 0,
             prefix: "[".as_bytes().to_vec(),
@@ -135,22 +135,23 @@ where
 {
     type Item = Result<Bytes, actix_web::Error>;
 
+
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         use ByteStreamState::*;
         use Poll::*;
-        if let Finished = self.state {
+        if let Done = self.state {
             return Ready(None);
         }
         self.reserve();
-        if let New = self.state {
-            self.state = ByteStreamState::Started;
+        if let Unused = self.state {
+            self.state = Empty;
             self.put_prefix();
         }
         loop {
             match self.inner.poll_next_unpin(cx) {
                 Ready(Some(Ok(record))) => {
                     match self.state {
-                        Started => self.state = NonEmpty,
+                        Empty => self.state = NonEmpty,
                         NonEmpty => self.put_separator(),
                         _ => (),
                     };
@@ -172,7 +173,7 @@ where
                     return Ready(Some(Err(ErrorInternalServerError(e))));
                 }
                 Ready(None) => {
-                    self.state = ByteStreamState::Finished;
+                    self.state = Done;
                     self.put_suffix();
                     return Ready(Some(Ok(self.get_bytes())));
                 }
@@ -183,6 +184,19 @@ where
                     return Ready(Some(Ok(self.get_bytes())));
                 }
             }
+        }
+    }
+}
+
+#[cfg(feature = "logging")]
+impl<T, St, F> Drop for ByteStream<T, St, F>
+where
+    St: Stream<Item = Result<T, sqlx::Error>>,
+    F: FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>,
+{
+    fn drop(&mut self) {
+        if !matches!(self.state, ByteStreamState::Done) {
+            log::error!("dropped an unfinished ByteStream");
         }
     }
 }
