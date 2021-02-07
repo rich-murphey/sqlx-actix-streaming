@@ -8,6 +8,8 @@ use futures::{
 };
 pub use std::io::Write;
 use std::pin::Pin;
+
+#[derive(Debug)]
 enum ByteStreamState {
     Unused,
     Empty,
@@ -196,7 +198,7 @@ where
 {
     fn drop(&mut self) {
         if !matches!(self.state, ByteStreamState::Done) {
-            error!("dropped an unfinished ByteStream");
+            error!("dropped ByteStream in state: {:?}", self.state);
         }
     }
 }
