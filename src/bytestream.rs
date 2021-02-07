@@ -196,7 +196,7 @@ where
 {
     fn drop(&mut self) {
         if !matches!(self.state, ByteStreamState::Done) {
-            log::error!("dropped an unfinished ByteStream");
+            error!("dropped an unfinished ByteStream");
         }
     }
 }
