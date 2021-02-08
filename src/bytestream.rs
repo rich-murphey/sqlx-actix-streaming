@@ -14,6 +14,7 @@ enum ByteStreamState {
     Unused,
     Empty,
     NonEmpty,
+    Error,
     Done,
 }
 #[cfg(feature = "logging")]
@@ -33,6 +34,7 @@ where
     suffix: Vec<u8>,
     buf: BytesWriter,
     serializer: Box<F>,
+    items: usize,
 }
 
 impl<T, St, F> ByteStream<T, St, F>
@@ -54,6 +56,7 @@ where
             suffix: "]".as_bytes().to_vec(),
             buf: BytesWriter(BytesMut::with_capacity(Self::DEFAULT_BUF_SIZE)),
             serializer,
+            items: 0,
         }
     }
     /// pin and box the stream and box the serializer function.
@@ -152,6 +155,7 @@ where
         loop {
             match self.inner.poll_next_unpin(cx) {
                 Ready(Some(Ok(record))) => {
+                    self.items += 1;
                     match self.state {
                         Empty => self.state = NonEmpty,
                         NonEmpty => self.put_separator(),
@@ -170,6 +174,7 @@ where
                     return Ready(Some(Ok(self.get_bytes())));
                 }
                 Ready(Some(Err(e))) => {
+                    self.state = Error;
                     #[cfg(feature = "logging")]
                     error!("poll_next: {:?}", e);
                     return Ready(Some(Err(ErrorInternalServerError(e))));
@@ -198,7 +203,7 @@ where
 {
     fn drop(&mut self) {
         if !matches!(self.state, ByteStreamState::Done) {
-            error!("dropped ByteStream in state: {:?}", self.state);
+            error!("dropped ByteStream in state: {:?} after {} items", self.state, self.items);
         }
     }
 }

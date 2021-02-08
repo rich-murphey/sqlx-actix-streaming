@@ -63,7 +63,7 @@ macro_rules! query_as_stream [
             $pool,
             $sql,
             |pool,sql| {
-                sqlx::query_as::<sqlx::postgres::Postgres, $struct_name>(sql)
+                sqlx::query_as::<_, $struct_name>(sql)
                     $( .bind($arg) )*
                     .fetch(pool)
             }
@@ -107,7 +107,7 @@ macro_rules! query_as_byte_stream [
                 $pool,
                 $sql,
                 |pool,sql| {
-                    sqlx::query_as::<sqlx::postgres::Postgres, $struct_name>(sql)
+                    sqlx::query_as::<_, $struct_name>(sql)
                         $( .bind($arg) )*
                         .fetch(pool)
                 },
@@ -150,7 +150,7 @@ macro_rules! query_byte_stream [
                 $pool,
                 $sql,
                 |pool,sql| {
-                    sqlx::query::<sqlx::postgres::Postgres>(sql)
+                    sqlx::query::<_>(sql)
                         $( .bind($arg) )*
                         .fetch(pool)
                 },
