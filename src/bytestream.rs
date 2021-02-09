@@ -11,10 +11,15 @@ use std::pin::Pin;
 
 #[derive(Debug)]
 enum ByteStreamState {
+    // self.poll_next() has never been called.
     Unused,
+    // inner.poll_next() has never returned an item.
     Empty,
+    // inner.poll_next() has returned an item.
     NonEmpty,
+    // self.poll_next() had an error occur.
     Error,
+    // inner.poll_next() has returned Ready(None).
     Done,
 }
 #[cfg(feature = "logging")]
