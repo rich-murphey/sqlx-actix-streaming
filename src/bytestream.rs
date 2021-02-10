@@ -145,7 +145,6 @@ where
 {
     type Item = Result<Bytes, actix_web::Error>;
 
-
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         use ByteStreamState::*;
         use Poll::*;
@@ -208,14 +207,17 @@ where
 {
     fn drop(&mut self) {
         if !matches!(self.state, ByteStreamState::Done) {
-            error!("dropped ByteStream in state: {:?} after {} items", self.state, self.items);
+            error!(
+                "dropped ByteStream in state: {:?} after {} items",
+                self.state, self.items
+            );
         }
     }
 }
 
 pub struct BytesWriter(pub BytesMut);
 
-impl std::io::Write for BytesWriter {
+impl Write for BytesWriter {
     #[inline]
     fn write(&mut self, src: &[u8]) -> std::io::Result<usize> {
         self.0.extend_from_slice(src);
