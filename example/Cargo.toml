@@ -4,6 +4,15 @@ name = "widgets"
 version = "0.1.0"
 edition = "2018"
 
+[features]
+default = [ "runtime-actix-rustls"]
+
+runtime-actix-rustls = [ "sqlx/runtime-actix-rustls", "sqlx-actix-streaming/runtime-actix-rustls" ]
+runtime-actix-native-tls = [ "sqlx/runtime-actix-native-tls", "sqlx-actix-streaming/runtime-actix-native-tls" ]
+runtime-async-std-native-tls = [ "sqlx/runtime-async-std-native-tls", "sqlx-actix-streaming/runtime-async-std-native-tls" ]
+runtime-tokio-native-tls = [ "sqlx/runtime-tokio-native-tls", "sqlx-actix-streaming/runtime-tokio-native-tls" ]
+runtime-async-std-rustls = [ "sqlx/runtime-async-std-rustls", "sqlx-actix-streaming/runtime-async-std-rustls" ]
+
 [dependencies]
 actix-web = "3"
 anyhow = "1"
@@ -14,7 +23,7 @@ log = "0"
 num_cpus = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }
-sqlx = { version = "0", features = [ "postgres", "runtime-actix-rustls" ] }
+sqlx = { version = "0.4", features = [ "postgres" ] }
 sqlx-actix-streaming = { path = "..", features = ["macros"] }
 sys-info = "0"
 thiserror = "1"
