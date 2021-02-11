@@ -33,7 +33,6 @@ where
     inner: Pin<Box<St>>,
     state: ByteStreamState,
     buf_size: usize,
-    item_size: usize,
     prefix: Vec<u8>,
     separator: Vec<u8>,
     suffix: Vec<u8>,
@@ -55,7 +54,6 @@ where
             inner,
             state: ByteStreamState::Unused,
             buf_size: Self::DEFAULT_BUF_SIZE,
-            item_size: 0,
             prefix: "[".as_bytes().to_vec(),
             separator: ",".as_bytes().to_vec(),
             suffix: "]".as_bytes().to_vec(),
@@ -154,14 +152,11 @@ where
                         break Ready(Some(Err(ErrorInternalServerError(e))));
                     }
                     let item_size = self.buf.0.len() - initial_len;
-                    if self.item_size < item_size {
-                        self.item_size = item_size;
-                        if self.buf_size < self.item_size {
-                            self.buf_size = self.item_size.next_power_of_two();
-                        }
+                    if self.buf_size < item_size {
+                        self.buf_size = item_size.next_power_of_two();
                     }
                     let remaining_space = self.buf.0.capacity() - self.buf.0.len();
-                    if self.item_size <= remaining_space {
+                    if item_size <= remaining_space {
                         continue;
                     }
                     break Ready(Some(Ok(self.get_bytes())));
