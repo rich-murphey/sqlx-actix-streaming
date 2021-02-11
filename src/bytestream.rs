@@ -169,30 +169,30 @@ where
                     if let Err(e) = self.write_record(&record) {
                         #[cfg(feature = "logging")]
                         error!("write_record: {:?}", e);
-                        return Ready(Some(Err(ErrorInternalServerError(e))));
+                        break Ready(Some(Err(ErrorInternalServerError(e))));
                     }
                     self.adjust_item_size(initial_len);
                     if self.has_room_for_item() {
                         continue;
                     }
-                    return Ready(Some(Ok(self.get_bytes())));
+                    break Ready(Some(Ok(self.get_bytes())));
                 }
                 Ready(Some(Err(e))) => {
                     self.state = Error;
                     #[cfg(feature = "logging")]
                     error!("poll_next: {:?}", e);
-                    return Ready(Some(Err(ErrorInternalServerError(e))));
+                    break Ready(Some(Err(ErrorInternalServerError(e))));
                 }
                 Ready(None) => {
                     self.state = Done;
                     self.put_suffix();
-                    return Ready(Some(Ok(self.get_bytes())));
+                    break Ready(Some(Ok(self.get_bytes())));
                 }
                 Pending => {
                     if self.buf.0.is_empty() {
-                        return Pending;
+                        break Pending;
                     }
-                    return Ready(Some(Ok(self.get_bytes())));
+                    break Ready(Some(Ok(self.get_bytes())));
                 }
             }
         }
@@ -206,7 +206,7 @@ where
     F: FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>,
 {
     fn drop(&mut self) {
-        if !matches!(self.state, ByteStreamState::Done) {
+        if let ByteStreamState::Done = self.state {
             error!(
                 "dropped ByteStream in state: {:?} after {} items",
                 self.state, self.items
