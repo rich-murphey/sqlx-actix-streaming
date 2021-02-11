@@ -11,15 +11,13 @@ use std::pin::Pin;
 
 #[derive(Debug)]
 enum ByteStreamState {
-    // self.poll_next() has never been called.
+    /// self.poll_next() has never been called.
     Unused,
-    // inner.poll_next() has never returned an item.
+    /// inner.poll_next() has never returned an item.
     Empty,
-    // inner.poll_next() has returned an item.
+    /// inner.poll_next() has returned an item.
     NonEmpty,
-    // self.poll_next() had an error occur.
-    Error,
-    // inner.poll_next() has returned Ready(None).
+    /// inner.poll_next() has returned Ready(None).
     Done,
 }
 #[cfg(feature = "logging")]
@@ -32,13 +30,14 @@ where
 {
     inner: Pin<Box<St>>,
     state: ByteStreamState,
-    buf_size: usize,
+    item_size: usize,
     prefix: Vec<u8>,
     separator: Vec<u8>,
     suffix: Vec<u8>,
     buf: BytesWriter,
     serializer: Box<F>,
-    items: usize,
+    #[cfg(feature = "logging")]
+    item_count: usize,
 }
 
 impl<T, St, F> ByteStream<T, St, F>
@@ -47,43 +46,46 @@ where
     F: FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>,
 {
     #![allow(dead_code)]
-    const DEFAULT_BUF_SIZE: usize = 2048;
+    const DEFAULT_ITEM_SIZE: usize = 2048;
     pub fn new(inner: Pin<Box<St>>, serializer: Box<F>) -> Self {
         // TODO: this should be a builder.
         Self {
             inner,
             state: ByteStreamState::Unused,
-            buf_size: Self::DEFAULT_BUF_SIZE,
-            prefix: "[".as_bytes().to_vec(),
-            separator: ",".as_bytes().to_vec(),
-            suffix: "]".as_bytes().to_vec(),
-            buf: BytesWriter(BytesMut::with_capacity(Self::DEFAULT_BUF_SIZE)),
+            item_size: Self::DEFAULT_ITEM_SIZE,
+            prefix: vec![b'['],
+            separator: vec![b','],
+            suffix: vec![b']'],
+            buf: BytesWriter(BytesMut::with_capacity(Self::DEFAULT_ITEM_SIZE)),
             serializer,
-            items: 0,
+            #[cfg(feature = "logging")]
+            item_count: 0,
         }
     }
-    /// pin and box the stream and box the serializer function.
+    /// Create a stream of `Bytes` from a stream of objects and a
+    /// serializer for those objects.
     pub fn make(inner: St, serializer: F) -> Self {
         Self::new(Box::pin(inner), Box::new(serializer))
     }
-    /// set the prefix for the json array. '[' by default.
+    /// Set the prefix for the json array. '[' by default.
     pub fn prefix<S: ToString>(mut self, s: S) -> Self {
         self.prefix = s.to_string().into_bytes();
         self
     }
-    /// set the separator for the json array elements. ',' by default.
+    /// Set the separator for the json array elements. ',' by default.
     pub fn separator<S: ToString>(mut self, s: S) -> Self {
         self.separator = s.to_string().into_bytes();
         self
     }
-    /// set the suffix for the json array. ']' by default.
+    /// Set the suffix for the json array. ']' by default.
     pub fn suffix<S: ToString>(mut self, s: S) -> Self {
         self.suffix = s.to_string().into_bytes();
         self
     }
-    /// set the buffer size for the json text.
+    /// Set the expected size of the json text of a single item.
     pub fn size(mut self, size: usize) -> Self {
-        self.buf_size = size;
+        self.item_size = size;
+        self.reserve_one_item();
         self
     }
     // append the configured prefix to the output buffer.
@@ -108,10 +110,10 @@ where
     }
     // ensure capacity to write one additional item into the buffer.
     #[inline]
-    fn reserve(&mut self) {
-        self.buf.0.reserve(self.buf_size);
+    fn reserve_one_item(&mut self) {
+        self.buf.0.reserve(self.item_size);
     }
-    // use the given closure to write a record to the output buffer.
+    // use the given closure to write a record to the buffer.
     #[inline]
     fn write_record(&mut self, record: &T) -> Result<(), actix_web::Error> {
         (self.serializer)(&mut self.buf, record)
@@ -131,7 +133,7 @@ where
         if let Done = self.state {
             return Ready(None);
         }
-        self.reserve();
+        self.reserve_one_item();
         if let Unused = self.state {
             self.state = Empty;
             self.put_prefix();
@@ -139,7 +141,10 @@ where
         loop {
             match self.inner.poll_next_unpin(cx) {
                 Ready(Some(Ok(record))) => {
-                    self.items += 1;
+                    #[cfg(feature = "logging")]
+                    {
+                        self.item_count += 1;
+                    }
                     match self.state {
                         Empty => self.state = NonEmpty,
                         NonEmpty => self.put_separator(),
@@ -152,8 +157,8 @@ where
                         break Ready(Some(Err(ErrorInternalServerError(e))));
                     }
                     let item_size = self.buf.0.len() - initial_len;
-                    if self.buf_size < item_size {
-                        self.buf_size = item_size.next_power_of_two();
+                    if self.item_size < item_size {
+                        self.item_size = item_size.next_power_of_two();
                     }
                     let remaining_space = self.buf.0.capacity() - self.buf.0.len();
                     if item_size <= remaining_space {
@@ -162,7 +167,6 @@ where
                     break Ready(Some(Ok(self.get_bytes())));
                 }
                 Ready(Some(Err(e))) => {
-                    self.state = Error;
                     #[cfg(feature = "logging")]
                     error!("poll_next: {:?}", e);
                     break Ready(Some(Err(ErrorInternalServerError(e))));
@@ -190,10 +194,10 @@ where
     F: FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>,
 {
     fn drop(&mut self) {
-        if let ByteStreamState::Done = self.state {
-            error!(
+        if !matches!(self.state, ByteStreamState::Done) {
+            warn!(
                 "dropped ByteStream in state: {:?} after {} items",
-                self.state, self.items
+                self.state, self.item_count
             );
         }
     }
