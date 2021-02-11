@@ -113,24 +113,6 @@ where
     fn reserve(&mut self) {
         self.buf.0.reserve(self.buf_size);
     }
-    // Make the buffer 20% larger than the largest item, and round it
-    // up to a power of two.
-    #[inline]
-    fn adjust_item_size(&mut self, inital_len: usize) {
-        let item_size = self.buf.0.len() - inital_len;
-        if self.item_size < item_size {
-            self.item_size = item_size;
-            while self.buf_size < self.item_size * 5 / 4 {
-                self.buf_size <<= 1;
-            }
-        }
-    }
-    // return true if there is room for one more item in the buffer.
-    #[inline]
-    fn has_room_for_item(&self) -> bool {
-        let remaining_space = self.buf.0.capacity() - self.buf.0.len();
-        self.item_size <= remaining_space
-    }
     // use the given closure to write a record to the output buffer.
     #[inline]
     fn write_record(&mut self, record: &T) -> Result<(), actix_web::Error> {
@@ -171,8 +153,15 @@ where
                         error!("write_record: {:?}", e);
                         break Ready(Some(Err(ErrorInternalServerError(e))));
                     }
-                    self.adjust_item_size(initial_len);
-                    if self.has_room_for_item() {
+                    let item_size = self.buf.0.len() - initial_len;
+                    if self.item_size < item_size {
+                        self.item_size = item_size;
+                        if self.buf_size < self.item_size {
+                            self.buf_size = self.item_size.next_power_of_two();
+                        }
+                    }
+                    let remaining_space = self.buf.0.capacity() - self.buf.0.len();
+                    if self.item_size <= remaining_space {
                         continue;
                     }
                     break Ready(Some(Ok(self.get_bytes())));
