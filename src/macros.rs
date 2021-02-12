@@ -20,7 +20,7 @@ macro_rules! query_stream [
         $sql:expr,
         $( $arg:expr ),*
     ) => ({
-        $crate::RowWStmtStream::make(
+        $crate::SqlRowStream::make(
             $pool,
             $sql,
             |pool,sql| {
@@ -40,7 +40,7 @@ macro_rules! query_as_stream [
         $sql:literal,
         $( $arg:expr ),*
     ) => ({
-        $crate::RowWStmtStream::make(
+        $crate::SqlRowStream::make(
             $pool,
             $sql.to_string(),
             |pool,_sql| {
@@ -59,7 +59,7 @@ macro_rules! query_as_stream [
         $sql:expr,
         $( $arg:expr ),*
     ) => ({
-        $crate::RowWStmtStream::make(
+        $crate::SqlRowStream::make(
             $pool,
             $sql,
             |pool,sql| {
@@ -103,7 +103,7 @@ macro_rules! query_as_byte_stream [
         $( $arg:expr ),*
     ) => ({
         $crate::ByteStream::new(
-            $crate::RowWStmtStream::make(
+            $crate::SqlRowStream::make(
                 $pool,
                 $sql,
                 |pool,sql| {
@@ -146,7 +146,7 @@ macro_rules! query_byte_stream [
         $( $arg:expr ),*
     ) => ({
         $crate::ByteStream::new(
-            $crate::RowWStmtStream::make(
+            $crate::SqlRowStream::make(
                 $pool,
                 $sql,
                 |pool,sql| {

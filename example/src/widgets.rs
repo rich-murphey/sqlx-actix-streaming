@@ -61,7 +61,7 @@ pub async fn widgets4(
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(ByteStream::new(
-            RowWStmtStream::make(
+            SqlRowStream::make(
                 pool.as_ref(),
                 "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
                 |pool, sql| {
