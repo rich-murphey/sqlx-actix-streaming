@@ -47,7 +47,7 @@ where
     buf: BytesWriter,
     #[cfg(feature = "logging")]
     item_count: usize,
-    phantom: PhantomData<(DB, Builder)>,
+    phantom: PhantomData<Builder>,
 }
 
 impl<DB, InnerVal, Builder, Serializer> SqlxStream<DB, InnerVal, Builder, Serializer>

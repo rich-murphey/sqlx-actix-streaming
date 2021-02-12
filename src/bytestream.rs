@@ -11,7 +11,7 @@ pub use std::io::Write;
 use std::pin::Pin;
 
 #[derive(Debug)]
-pub enum ByteStreamState {
+pub enum State {
     /// self.poll_next() has never been called.
     Unused,
     /// inner.poll_next() has never returned an item.
@@ -31,7 +31,7 @@ where
 {
     inner: Pin<Box<InnerStream>>,
     serializer: Box<Serializer>,
-    state: ByteStreamState,
+    state: State,
     item_size: usize,
     prefix: Vec<u8>,
     separator: Vec<u8>,
@@ -53,7 +53,7 @@ where
         Self {
             inner: Box::pin(stream),
             serializer: Box::new(serializer),
-            state: ByteStreamState::Unused,
+            state: State::Unused,
             item_size: Self::DEFAULT_ITEM_SIZE,
             prefix: vec![b'['],
             separator: vec![b','],
@@ -128,8 +128,8 @@ where
     type Item = Result<Bytes, actix_web::Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        use ByteStreamState::*;
         use Poll::*;
+        use State::*;
         if let Done = self.state {
             return Ready(None);
         }
@@ -194,7 +194,7 @@ where
     Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
 {
     fn drop(&mut self) {
-        if !matches!(self.state, ByteStreamState::Done) {
+        if !matches!(self.state, State::Done) {
             warn!(
                 "dropped ByteStream in state: {:?} after {} items",
                 self.state, self.item_count
