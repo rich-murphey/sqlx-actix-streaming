@@ -33,7 +33,7 @@ pub async fn widgets(
         .content_type("application/json")
         .streaming(
             // this ByteStream is a stream of a JSON array of WidgetRecords
-            ByteStream::make(
+            ByteStream::new(
                 // this RowStream is stream of WidgetRecords that owns Pool
                 RowStream::make(pool.as_ref(), |pool| {
                     // this is a a stream of WidgetRecords that borrows Pool
@@ -60,7 +60,7 @@ pub async fn widgets4(
 ) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("application/json")
-        .streaming(ByteStream::make(
+        .streaming(ByteStream::new(
             RowWStmtStream::make(
                 pool.as_ref(),
                 "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
@@ -71,7 +71,7 @@ pub async fn widgets4(
                         .fetch(pool)
                 },
             ),
-            |buf: &mut BytesWriter, row| {
+            |buf: &mut BytesWriter, row: &PgRow| {
                 serde_json::to_writer(
                     buf,
                     &WidgetRecord2::from_row(row).map_err(ErrorInternalServerError)?,

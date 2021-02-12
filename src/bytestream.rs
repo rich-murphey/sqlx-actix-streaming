@@ -10,7 +10,7 @@ pub use std::io::Write;
 use std::pin::Pin;
 
 #[derive(Debug)]
-enum ByteStreamState {
+pub enum ByteStreamState {
     /// self.poll_next() has never been called.
     Unused,
     /// inner.poll_next() has never returned an item.
@@ -23,49 +23,48 @@ enum ByteStreamState {
 #[cfg(feature = "logging")]
 use log::*;
 
-pub struct ByteStream<T, St, F>
+pub struct ByteStream<InnerItem, InnerStream, Serializer>
 where
-    St: Stream<Item = Result<T, sqlx::Error>>,
-    F: FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>,
+    InnerStream: Stream<Item = Result<InnerItem, sqlx::Error>>,
+    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
 {
-    inner: Pin<Box<St>>,
+    inner: Pin<Box<InnerStream>>,
+    serializer: Box<Serializer>,
     state: ByteStreamState,
     item_size: usize,
     prefix: Vec<u8>,
     separator: Vec<u8>,
     suffix: Vec<u8>,
     buf: BytesWriter,
-    serializer: Box<F>,
     #[cfg(feature = "logging")]
     item_count: usize,
 }
 
-impl<T, St, F> ByteStream<T, St, F>
+impl<InnerItem, InnerStream, Serializer> ByteStream<InnerItem, InnerStream, Serializer>
 where
-    St: Stream<Item = Result<T, sqlx::Error>>,
-    F: FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>,
+    InnerStream: Stream<Item = Result<InnerItem, sqlx::Error>>,
+    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
 {
-    #![allow(dead_code)]
     const DEFAULT_ITEM_SIZE: usize = 2048;
-    pub fn new(inner: Pin<Box<St>>, serializer: Box<F>) -> Self {
-        // TODO: this should be a builder.
+
+    pub fn new(stream: InnerStream, serializer: Serializer) -> Self {
         Self {
-            inner,
+            inner: Box::pin(stream),
+            serializer: Box::new(serializer),
             state: ByteStreamState::Unused,
             item_size: Self::DEFAULT_ITEM_SIZE,
             prefix: vec![b'['],
             separator: vec![b','],
             suffix: vec![b']'],
             buf: BytesWriter(BytesMut::with_capacity(Self::DEFAULT_ITEM_SIZE)),
-            serializer,
             #[cfg(feature = "logging")]
             item_count: 0,
         }
     }
-    /// Create a stream of `Bytes` from a stream of objects and a
-    /// serializer for those objects.
-    pub fn make(inner: St, serializer: F) -> Self {
-        Self::new(Box::pin(inner), Box::new(serializer))
+    /// Set the serializer. The serializer writes each item to the buffer as json text.
+    pub fn serializer(mut self, s: Serializer) -> Self {
+        self.serializer = Box::new(s);
+        self
     }
     /// Set the prefix for the json array. '[' by default.
     pub fn prefix<S: ToString>(mut self, s: S) -> Self {
@@ -85,7 +84,6 @@ where
     /// Set the expected size of the json text of a single item.
     pub fn size(mut self, size: usize) -> Self {
         self.item_size = size;
-        self.reserve_one_item();
         self
     }
     // append the configured prefix to the output buffer.
@@ -115,15 +113,15 @@ where
     }
     // use the given closure to write a record to the buffer.
     #[inline]
-    fn write_record(&mut self, record: &T) -> Result<(), actix_web::Error> {
+    fn write_record(&mut self, record: &InnerItem) -> Result<(), actix_web::Error> {
         (self.serializer)(&mut self.buf, record)
     }
 }
 
-impl<T, St, F> Stream for ByteStream<T, St, F>
+impl<InnerItem, InnerStream, Serializer> Stream for ByteStream<InnerItem, InnerStream, Serializer>
 where
-    St: Stream<Item = Result<T, sqlx::Error>>,
-    F: FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>,
+    InnerStream: Stream<Item = Result<InnerItem, sqlx::Error>>,
+    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
 {
     type Item = Result<Bytes, actix_web::Error>;
 
@@ -188,10 +186,10 @@ where
 }
 
 #[cfg(feature = "logging")]
-impl<T, St, F> Drop for ByteStream<T, St, F>
+impl<InnerItem, InnerStream, Serializer> Drop for ByteStream<InnerItem, InnerStream, Serializer>
 where
-    St: Stream<Item = Result<T, sqlx::Error>>,
-    F: FnMut(&mut BytesWriter, &T) -> Result<(), actix_web::Error>,
+    InnerStream: Stream<Item = Result<InnerItem, sqlx::Error>>,
+    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
 {
     fn drop(&mut self) {
         if !matches!(self.state, ByteStreamState::Done) {
