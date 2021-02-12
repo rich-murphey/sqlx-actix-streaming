@@ -9,16 +9,16 @@ pub use std::io::Write;
 use std::pin::Pin;
 
 #[ouroboros::self_referencing]
-pub struct RowStream<DB, T>
+pub struct RowStream<DB, Row>
 where
     DB: sqlx::Database,
 {
     pool: Box<Pool<DB>>,
     #[borrows(pool)]
     #[covariant] // Box is covariant.
-    inner: BoxStream<'this, Result<T, sqlx::Error>>,
+    inner: BoxStream<'this, Result<Row, sqlx::Error>>,
 }
-impl<DB, T> RowStream<DB, T>
+impl<DB, Row> RowStream<DB, Row>
 where
     DB: sqlx::Database,
 {
@@ -27,7 +27,7 @@ where
     where
         F: for<'this> FnOnce(
             &'this <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-        ) -> BoxStream<'this, Result<T, sqlx::Error>>,
+        ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
     {
         RowStreamBuilder {
             pool: Box::new(pool.clone()),
@@ -36,11 +36,11 @@ where
         .build()
     }
 }
-impl<DB, T> Stream for RowStream<DB, T>
+impl<DB, Row> Stream for RowStream<DB, Row>
 where
     DB: sqlx::Database,
 {
-    type Item = Result<T, sqlx::Error>;
+    type Item = Result<Row, sqlx::Error>;
     #[inline]
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         self.with_inner_mut(|s| s.as_mut().poll_next(cx))
@@ -48,7 +48,7 @@ where
 }
 
 #[ouroboros::self_referencing]
-pub struct RowWStmtStream<DB, T>
+pub struct SqlRowStream<DB, Row>
 where
     DB: sqlx::Database,
 {
@@ -56,9 +56,9 @@ where
     sql: Box<String>,
     #[borrows(pool, sql)]
     #[covariant] // Box is covariant.
-    inner: BoxStream<'this, Result<T, sqlx::Error>>,
+    inner: BoxStream<'this, Result<Row, sqlx::Error>>,
 }
-impl<DB, T> RowWStmtStream<DB, T>
+impl<DB, Row> SqlRowStream<DB, Row>
 where
     DB: sqlx::Database,
 {
@@ -69,9 +69,9 @@ where
         F: for<'this> FnOnce(
             &'this <Box<Pool<DB>> as ::core::ops::Deref>::Target,
             &'this <Box<String> as ::core::ops::Deref>::Target,
-        ) -> BoxStream<'this, Result<T, sqlx::Error>>,
+        ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
     {
-        RowWStmtStreamBuilder {
+        SqlRowStreamBuilder {
             pool: Box::new(pool.clone()),
             sql: Box::new(sql.to_string()),
             inner_builder: f,
@@ -79,11 +79,11 @@ where
         .build()
     }
 }
-impl<DB, T> Stream for RowWStmtStream<DB, T>
+impl<DB, Row> Stream for SqlRowStream<DB, Row>
 where
     DB: sqlx::Database,
 {
-    type Item = Result<T, sqlx::Error>;
+    type Item = Result<Row, sqlx::Error>;
     #[inline]
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         self.with_inner_mut(|s| s.as_mut().poll_next(cx))
