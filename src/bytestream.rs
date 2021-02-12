@@ -23,10 +23,10 @@ pub enum ByteStreamState {
 #[cfg(feature = "logging")]
 use log::*;
 
-pub struct ByteStream<InnerItem, InnerStream, Serializer>
+pub struct ByteStream<InnerVal, InnerStream, Serializer>
 where
-    InnerStream: Stream<Item = Result<InnerItem, sqlx::Error>>,
-    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
+    InnerStream: Stream<Item = Result<InnerVal, sqlx::Error>>,
+    Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
 {
     inner: Pin<Box<InnerStream>>,
     serializer: Box<Serializer>,
@@ -40,10 +40,10 @@ where
     item_count: usize,
 }
 
-impl<InnerItem, InnerStream, Serializer> ByteStream<InnerItem, InnerStream, Serializer>
+impl<InnerVal, InnerStream, Serializer> ByteStream<InnerVal, InnerStream, Serializer>
 where
-    InnerStream: Stream<Item = Result<InnerItem, sqlx::Error>>,
-    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
+    InnerStream: Stream<Item = Result<InnerVal, sqlx::Error>>,
+    Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
 {
     const DEFAULT_ITEM_SIZE: usize = 2048;
 
@@ -113,15 +113,15 @@ where
     }
     // use the given closure to write a record to the buffer.
     #[inline]
-    fn write_record(&mut self, record: &InnerItem) -> Result<(), actix_web::Error> {
+    fn write_record(&mut self, record: &InnerVal) -> Result<(), actix_web::Error> {
         (self.serializer)(&mut self.buf, record)
     }
 }
 
-impl<InnerItem, InnerStream, Serializer> Stream for ByteStream<InnerItem, InnerStream, Serializer>
+impl<InnerVal, InnerStream, Serializer> Stream for ByteStream<InnerVal, InnerStream, Serializer>
 where
-    InnerStream: Stream<Item = Result<InnerItem, sqlx::Error>>,
-    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
+    InnerStream: Stream<Item = Result<InnerVal, sqlx::Error>>,
+    Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
 {
     type Item = Result<Bytes, actix_web::Error>;
 
@@ -186,10 +186,10 @@ where
 }
 
 #[cfg(feature = "logging")]
-impl<InnerItem, InnerStream, Serializer> Drop for ByteStream<InnerItem, InnerStream, Serializer>
+impl<InnerVal, InnerStream, Serializer> Drop for ByteStream<InnerVal, InnerStream, Serializer>
 where
-    InnerStream: Stream<Item = Result<InnerItem, sqlx::Error>>,
-    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
+    InnerStream: Stream<Item = Result<InnerVal, sqlx::Error>>,
+    Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
 {
     fn drop(&mut self) {
         if !matches!(self.state, ByteStreamState::Done) {
