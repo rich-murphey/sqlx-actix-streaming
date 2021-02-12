@@ -48,7 +48,7 @@ where
 }
 
 #[ouroboros::self_referencing]
-pub struct SqlRowStream<DB, Row>
+pub struct RowStreamDyn<DB, Row>
 where
     DB: sqlx::Database,
 {
@@ -58,7 +58,7 @@ where
     #[covariant] // Box is covariant.
     inner: BoxStream<'this, Result<Row, sqlx::Error>>,
 }
-impl<DB, Row> SqlRowStream<DB, Row>
+impl<DB, Row> RowStreamDyn<DB, Row>
 where
     DB: sqlx::Database,
 {
@@ -71,7 +71,7 @@ where
             &'this <Box<String> as ::core::ops::Deref>::Target,
         ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
     {
-        SqlRowStreamBuilder {
+        RowStreamDynBuilder {
             pool: Box::new(pool.clone()),
             sql: Box::new(sql.to_string()),
             inner_builder: f,
@@ -79,7 +79,7 @@ where
         .build()
     }
 }
-impl<DB, Row> Stream for SqlRowStream<DB, Row>
+impl<DB, Row> Stream for RowStreamDyn<DB, Row>
 where
     DB: sqlx::Database,
 {

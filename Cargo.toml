@@ -19,6 +19,11 @@ runtime-async-std-rustls = [ "sqlx/runtime-async-std-rustls" ]
 runtime-tokio-native-tls = [ "sqlx/runtime-tokio-native-tls" ]
 runtime-tokio-rustls = [ "sqlx/runtime-tokio-rustls" ]
 
+postgres = [ "sqlx/postgres" ]
+mysql = [ "sqlx/mysql" ]
+sqlite = [ "sqlx/sqlite" ]
+mssql = [ "sqlx/mssql" ]
+
 [dependencies]
 actix-web = "3"
 futures = "0"

@@ -1,3 +1,4 @@
+// -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-
 use actix_web::{
     error::ErrorInternalServerError,
     web::{Bytes, BytesMut},
@@ -45,6 +46,7 @@ where
     InnerStream: Stream<Item = Result<InnerVal, sqlx::Error>>,
     Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
 {
+    #![allow(dead_code)]
     const DEFAULT_ITEM_SIZE: usize = 2048;
 
     pub fn new(stream: InnerStream, serializer: Serializer) -> Self {

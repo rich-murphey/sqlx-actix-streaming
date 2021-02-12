@@ -32,10 +32,10 @@ pub async fn widgets(
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(
-            // this ByteStream is a stream of a JSON array of WidgetRecords
-            ByteStream::new(
-                // this RowStream is stream of WidgetRecords that owns Pool
-                RowStream::make(pool.as_ref(), |pool| {
+            // a stream of Bytes containing an JSON text array of sqlx records
+            SqlxStream::new(
+                pool.as_ref(),
+                move |pool| {
                     // this is a a stream of WidgetRecords that borrows Pool
                     sqlx::query_as!(
                         WidgetRecord,
@@ -44,7 +44,7 @@ pub async fn widgets(
                         params.offset
                     )
                     .fetch(pool)
-                }),
+                },
                 |buf: &mut BytesWriter, record: &WidgetRecord| {
                     // this writes a WidgetRecords as JSON text to the output buffer
                     serde_json::to_writer(buf, record).map_err(ErrorInternalServerError)
@@ -60,17 +60,15 @@ pub async fn widgets4(
 ) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("application/json")
-        .streaming(ByteStream::new(
-            SqlRowStream::make(
-                pool.as_ref(),
-                "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-                |pool, sql| {
-                    sqlx::query(sql)
-                        .bind(params.limit)
-                        .bind(params.offset)
-                        .fetch(pool)
-                },
-            ),
+        .streaming(SqlxStreamDyn::new(
+            pool.as_ref(),
+            "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
+            move |pool, sql| {
+                sqlx::query(sql)
+                    .bind(params.limit)
+                    .bind(params.offset)
+                    .fetch(pool)
+            },
             |buf: &mut BytesWriter, row: &PgRow| {
                 serde_json::to_writer(
                     buf,
