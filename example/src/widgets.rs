@@ -29,30 +29,26 @@ pub async fn widgets6(
     web::Json(params): web::Json<WidgetParams>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    HttpResponse::Ok()
-        .content_type("application/json")
-        .streaming(json_array_stream!(
-            WidgetRecord,
-            pool.as_ref(),
-            "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-            params.limit,
-            params.offset
-        ))
+    json_array_response!(
+        WidgetRecord,
+        pool.as_ref(),
+        "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
+        params.limit,
+        params.offset
+    )
 }
 #[post("/widgets7")]
 pub async fn widgets7(
     web::Json(params): web::Json<WidgetParams>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    HttpResponse::Ok()
-        .content_type("application/json")
-        .streaming(json_array_stream!(
-            WidgetRecord,
-            pool.as_ref(),
-            "SELECT * FROM widgets LIMIT $1 OFFSET $2 ".to_owned(),
-            params.limit,
-            params.offset
-        ))
+    json_array_response!(
+        WidgetRecord,
+        pool.as_ref(),
+        "SELECT * FROM widgets LIMIT $1 OFFSET $2 ".to_owned(),
+        params.limit,
+        params.offset
+    )
 }
 
 #[post("/widgets")]
