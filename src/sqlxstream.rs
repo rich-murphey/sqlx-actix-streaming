@@ -29,15 +29,12 @@ pub enum State {
 #[cfg(feature = "logging")]
 use log::*;
 
-pub struct SqlxStream<DB, InnerVal, Builder, Serializer>
+pub struct SqlxStream<DB, InnerValue, Serializer>
 where
     DB: sqlx::Database,
-    Builder: for<'a> FnOnce(
-        &'a <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-    ) -> BoxStream<'a, Result<InnerVal, sqlx::Error>>,
-    Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
+    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
-    inner: Pin<Box<RowStream<DB, InnerVal>>>,
+    inner: Pin<Box<RowStream<DB, InnerValue>>>,
     serializer: Box<Serializer>,
     state: State,
     item_size: usize,
@@ -47,20 +44,22 @@ where
     buf: BytesWriter,
     #[cfg(feature = "logging")]
     item_count: usize,
-    phantom: PhantomData<Builder>,
 }
 
-impl<DB, InnerVal, Builder, Serializer> SqlxStream<DB, InnerVal, Builder, Serializer>
+impl<DB, InnerValue, Serializer> SqlxStream<DB, InnerValue, Serializer>
 where
     DB: sqlx::Database,
-    Builder: for<'a> FnOnce(
-        &'a <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-    ) -> BoxStream<'a, Result<InnerVal, sqlx::Error>>,
-    Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
+    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
     #![allow(dead_code)]
     const DEFAULT_ITEM_SIZE: usize = 2048;
-    pub fn new(pool: &Pool<DB>, builder: Builder, serializer: Serializer) -> Self {
+    pub fn new(
+        pool: &Pool<DB>,
+        builder: impl for<'a> FnOnce(
+            &'a <Box<Pool<DB>> as ::core::ops::Deref>::Target,
+        ) -> BoxStream<'a, Result<InnerValue, sqlx::Error>>,
+        serializer: Serializer,
+    ) -> Self {
         Self {
             inner: Box::pin(RowStream::make(pool, builder)),
             serializer: Box::new(serializer),
@@ -72,7 +71,6 @@ where
             buf: BytesWriter(BytesMut::with_capacity(Self::DEFAULT_ITEM_SIZE)),
             #[cfg(feature = "logging")]
             item_count: 0,
-            phantom: PhantomData,
         }
     }
     /// set the serializer. the serializer writes each item to the buffer as json text.
@@ -127,28 +125,15 @@ where
     }
     // use the given closure to write a record to the buffer.
     #[inline]
-    fn write_record(&mut self, record: &InnerVal) -> Result<(), actix_web::Error> {
+    fn write_record(&mut self, record: &InnerValue) -> Result<(), actix_web::Error> {
         (self.serializer)(&mut self.buf, record)
     }
 }
 
-impl<DB, InnerVal, Builder, Serializer> Unpin for SqlxStream<DB, InnerVal, Builder, Serializer>
+impl<DB, InnerValue, Serializer> Stream for SqlxStream<DB, InnerValue, Serializer>
 where
     DB: sqlx::Database,
-    Builder: for<'a> FnOnce(
-        &'a <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-    ) -> BoxStream<'a, Result<InnerVal, sqlx::Error>>,
-    Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
-{
-}
-
-impl<DB, InnerVal, Builder, Serializer> Stream for SqlxStream<DB, InnerVal, Builder, Serializer>
-where
-    DB: sqlx::Database,
-    Builder: for<'a> FnOnce(
-        &'a <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-    ) -> BoxStream<'a, Result<InnerVal, sqlx::Error>>,
-    Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
+    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
     type Item = Result<Bytes, actix_web::Error>;
 
@@ -213,13 +198,10 @@ where
 }
 
 #[cfg(feature = "logging")]
-impl<DB, InnerVal, Builder, Serializer> Drop for SqlxStream<DB, InnerVal, Builder, Serializer>
+impl<DB, InnerValue, Serializer> Drop for SqlxStream<DB, InnerValue, Serializer>
 where
     DB: sqlx::Database,
-    Builder: for<'a> FnOnce(
-        &'a <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-    ) -> BoxStream<'a, Result<InnerVal, sqlx::Error>>,
-    Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
+    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
     fn drop(&mut self) {
         if !matches!(self.state, State::Done) {
@@ -231,16 +213,12 @@ where
     }
 }
 
-pub struct SqlxStreamDyn<DB, InnerVal, Builder, Serializer>
+pub struct SqlxStreamDyn<DB, InnerValue, Serializer>
 where
     DB: sqlx::Database,
-    Builder: for<'a> FnOnce(
-        &'a <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-        &'a <Box<String> as ::core::ops::Deref>::Target,
-    ) -> BoxStream<'a, Result<InnerVal, sqlx::Error>>,
-    Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
+    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
-    inner: Pin<Box<RowStreamDyn<DB, InnerVal>>>,
+    inner: Pin<Box<RowStreamDyn<DB, InnerValue>>>,
     serializer: Box<Serializer>,
     state: State,
     item_size: usize,
@@ -250,24 +228,24 @@ where
     buf: BytesWriter,
     #[cfg(feature = "logging")]
     item_count: usize,
-    phantom: PhantomData<(DB, Builder)>,
 }
 
-impl<DB, InnerVal, Builder, Serializer> SqlxStreamDyn<DB, InnerVal, Builder, Serializer>
+impl<DB, InnerValue, Serializer> SqlxStreamDyn<DB, InnerValue, Serializer>
 where
     DB: sqlx::Database,
-    Builder: for<'a> FnOnce(
-        &'a <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-        &'a <Box<String> as ::core::ops::Deref>::Target,
-    ) -> BoxStream<'a, Result<InnerVal, sqlx::Error>>,
-    Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
+    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
     #![allow(dead_code)]
     const DEFAULT_ITEM_SIZE: usize = 2048;
-    pub fn new<Sql>(pool: &Pool<DB>, sql: Sql, builder: Builder, serializer: Serializer) -> Self
-    where
-        Sql: ToString,
-    {
+    pub fn new(
+        pool: &Pool<DB>,
+        sql: impl ToString,
+        builder: impl for<'a> FnOnce(
+            &'a <Box<Pool<DB>> as ::core::ops::Deref>::Target,
+            &'a <Box<String> as ::core::ops::Deref>::Target,
+        ) -> BoxStream<'a, Result<InnerValue, sqlx::Error>>,
+        serializer: Serializer,
+    ) -> Self {
         Self {
             inner: Box::pin(RowStreamDyn::make(pool, sql, builder)),
             serializer: Box::new(serializer),
@@ -279,7 +257,6 @@ where
             buf: BytesWriter(BytesMut::with_capacity(Self::DEFAULT_ITEM_SIZE)),
             #[cfg(feature = "logging")]
             item_count: 0,
-            phantom: PhantomData,
         }
     }
     /// set the serializer. the serializer writes each item to the buffer as json text.
@@ -334,30 +311,15 @@ where
     }
     // use the given closure to write a record to the buffer.
     #[inline]
-    fn write_record(&mut self, record: &InnerVal) -> Result<(), actix_web::Error> {
+    fn write_record(&mut self, record: &InnerValue) -> Result<(), actix_web::Error> {
         (self.serializer)(&mut self.buf, record)
     }
 }
 
-impl<DB, InnerVal, Builder, Serializer> Unpin for SqlxStreamDyn<DB, InnerVal, Builder, Serializer>
+impl<DB, InnerValue, Serializer> Stream for SqlxStreamDyn<DB, InnerValue, Serializer>
 where
     DB: sqlx::Database,
-    Builder: for<'a> FnOnce(
-        &'a <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-        &'a <Box<String> as ::core::ops::Deref>::Target,
-    ) -> BoxStream<'a, Result<InnerVal, sqlx::Error>>,
-    Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
-{
-}
-
-impl<DB, InnerVal, Builder, Serializer> Stream for SqlxStreamDyn<DB, InnerVal, Builder, Serializer>
-where
-    DB: sqlx::Database,
-    Builder: for<'a> FnOnce(
-        &'a <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-        &'a <Box<String> as ::core::ops::Deref>::Target,
-    ) -> BoxStream<'a, Result<InnerVal, sqlx::Error>>,
-    Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
+    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
     type Item = Result<Bytes, actix_web::Error>;
 
@@ -422,14 +384,10 @@ where
 }
 
 #[cfg(feature = "logging")]
-impl<DB, InnerVal, Builder, Serializer> Drop for SqlxStreamDyn<DB, InnerVal, Builder, Serializer>
+impl<DB, InnerValue, Serializer> Drop for SqlxStreamDyn<DB, InnerValue, Serializer>
 where
     DB: sqlx::Database,
-    Builder: for<'a> FnOnce(
-        &'a <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-        &'a <Box<String> as ::core::ops::Deref>::Target,
-    ) -> BoxStream<'a, Result<InnerVal, sqlx::Error>>,
-    Serializer: FnMut(&mut BytesWriter, &InnerVal) -> Result<(), actix_web::Error>,
+    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
     fn drop(&mut self) {
         if !matches!(self.state, State::Done) {

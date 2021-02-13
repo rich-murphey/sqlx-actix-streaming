@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2018"
 
 [features]
-default = [ "runtime-actix-rustls"]
+default = [ "runtime-actix-rustls", "postgres" ]
 
 runtime-actix-native-tls = [ "sqlx/runtime-actix-native-tls", "sqlx-actix-streaming/runtime-actix-native-tls" ]
 runtime-actix-rustls = [ "sqlx/runtime-actix-rustls", "sqlx-actix-streaming/runtime-actix-rustls" ]
@@ -33,3 +33,4 @@ sqlx = { version = "0.4", features = [ "postgres" ] }
 sqlx-actix-streaming = { path = "..", features = ["macros"] }
 sys-info = "0"
 thiserror = "1"
+funty = "=1.1.0"
