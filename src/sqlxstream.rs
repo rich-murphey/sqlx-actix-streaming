@@ -1,5 +1,4 @@
 // -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-
-#![allow(unused_imports, dead_code)]
 use crate::{BytesWriter, RowStream, RowStreamDyn};
 use actix_web::{
     error::ErrorInternalServerError,
@@ -10,9 +9,8 @@ use futures::{
     task::{Context, Poll},
     Stream, StreamExt,
 };
-use sqlx::{prelude::*, Pool};
+use sqlx::Pool;
 pub use std::io::Write;
-use std::marker::PhantomData;
 use std::pin::Pin;
 
 #[derive(Debug)]
@@ -51,7 +49,6 @@ where
     DB: sqlx::Database,
     Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
-    #![allow(dead_code)]
     const DEFAULT_ITEM_SIZE: usize = 2048;
     pub fn new(
         pool: &Pool<DB>,
@@ -235,7 +232,6 @@ where
     DB: sqlx::Database,
     Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
-    #![allow(dead_code)]
     const DEFAULT_ITEM_SIZE: usize = 2048;
     pub fn new(
         pool: &Pool<DB>,
