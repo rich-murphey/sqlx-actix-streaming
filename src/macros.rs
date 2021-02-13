@@ -1,3 +1,50 @@
+// -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-
+#[macro_export]
+macro_rules! json_array_stream [
+    (
+        $struct_name:ident,
+        $pool:expr,
+        $sql:literal,
+        $( $arg:expr ),*
+    ) => ({
+        $crate::SqlxStream::new(
+            $pool,
+            |pool| {
+                sqlx::query_as!(
+                    $struct_name,
+                    $sql,
+                    $( $arg, )*
+                )
+                    .fetch(pool)
+            },
+            |buf: &mut BytesWriter, row| {
+                serde_json::to_writer(buf, row)
+                    .map_err(ErrorInternalServerError)
+            },
+        )
+    });
+    (
+        $struct_name:ident,
+        $pool:expr,
+        $sql:expr,
+        $( $arg:expr ),*
+    ) => ({
+        $crate::SqlxStreamDyn::new(
+            $pool,
+            $sql,
+            |pool,sql| {
+                sqlx::query_as::<_, $struct_name>(sql)
+                    $( .bind($arg) )*
+                    .fetch(pool)
+            },
+            |buf: &mut BytesWriter, row| {
+                serde_json::to_writer(buf, row)
+                    .map_err(ErrorInternalServerError)
+            },
+        )
+    });
+];
+
 #[macro_export]
 macro_rules! query_stream [
     (

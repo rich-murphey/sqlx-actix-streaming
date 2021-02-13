@@ -1,3 +1,4 @@
+// -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-
 use actix_web::*;
 use futures::{
     prelude::*,
