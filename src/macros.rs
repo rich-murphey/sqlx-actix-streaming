@@ -1,6 +1,6 @@
 // -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-
 #[macro_export]
-macro_rules! json_array_response [
+macro_rules! json_response [
     (
         $struct_name:ident,
         $pool:expr,
@@ -54,7 +54,7 @@ macro_rules! json_array_response [
 ];
 
 #[macro_export]
-macro_rules! json_array_stream [
+macro_rules! json_stream [
     (
         $struct_name:ident,
         $pool:expr,

@@ -24,12 +24,12 @@ pub struct WidgetRecord2<'a> {
     pub name: &'a str,
     pub description: &'a str,
 }
-#[post("/widgets6")]
-pub async fn widgets6(
+#[post("/widgets")]
+pub async fn widgets(
     web::Json(params): web::Json<WidgetParams>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    json_array_response!(
+    json_response!(
         WidgetRecord,
         pool.as_ref(),
         "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
@@ -37,12 +37,13 @@ pub async fn widgets6(
         params.offset
     )
 }
-#[post("/widgets7")]
-pub async fn widgets7(
+
+#[post("/widgets2")]
+pub async fn widgets2(
     web::Json(params): web::Json<WidgetParams>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    json_array_response!(
+    json_response!(
         WidgetRecord,
         pool.as_ref(),
         "SELECT * FROM widgets LIMIT $1 OFFSET $2 ".to_owned(),
@@ -51,8 +52,8 @@ pub async fn widgets7(
     )
 }
 
-#[post("/widgets")]
-pub async fn widgets(
+#[post("/widgets3")]
+pub async fn widgets3(
     web::Json(params): web::Json<WidgetParams>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
@@ -254,4 +255,15 @@ pub async fn widgetrows3<'a>(
             .collect::<Vec<WidgetTuple2>>()
             .await,
     )
+}
+pub fn service(cfg: &mut web::ServiceConfig) {
+    cfg.service(widgets);
+    cfg.service(widgets2);
+    cfg.service(widgets3);
+    cfg.service(widgets4);
+    cfg.service(widget_table);
+    cfg.service(widget_table2);
+    cfg.service(widgetrows);
+    cfg.service(widgetrows2);
+    cfg.service(widgetrows3);
 }
