@@ -70,11 +70,6 @@ where
             item_count: 0,
         }
     }
-    /// set the serializer. the serializer writes each item to the buffer as json text.
-    pub fn serializer(mut self, s: Serializer) -> Self {
-        self.serializer = Box::new(s);
-        self
-    }
     /// Set the prefix for the json array. '[' by default.
     pub fn prefix<S: ToString>(mut self, s: S) -> Self {
         self.prefix = s.to_string().into_bytes();
@@ -90,11 +85,16 @@ where
         self.suffix = s.to_string().into_bytes();
         self
     }
-    /// Set the expected size of the json text of a single item.
-    pub fn size(mut self, size: usize) -> Self {
-        self.item_size = size;
-        self
-    }
+    // /// set the serializer. the serializer writes each item to the buffer as json text.
+    // pub fn serializer(mut self, s: Serializer) -> Self {
+    //     self.serializer = Box::new(s);
+    //     self
+    // }
+    // /// Set the expected size of the json text of a single item.
+    // pub fn size(mut self, size: usize) -> Self {
+    //     self.item_size = size;
+    //     self
+    // }
     // append the configured prefix to the output buffer.
     #[inline]
     fn put_prefix(&mut self) {
@@ -255,11 +255,6 @@ where
             item_count: 0,
         }
     }
-    /// set the serializer. the serializer writes each item to the buffer as json text.
-    pub fn serializer(mut self, s: Serializer) -> Self {
-        self.serializer = Box::new(s);
-        self
-    }
     /// Set the prefix for the json array. '[' by default.
     pub fn prefix<S: ToString>(mut self, s: S) -> Self {
         self.prefix = s.to_string().into_bytes();
@@ -273,11 +268,6 @@ where
     /// Set the suffix for the json array. ']' by default.
     pub fn suffix<S: ToString>(mut self, s: S) -> Self {
         self.suffix = s.to_string().into_bytes();
-        self
-    }
-    /// Set the expected size of the json text of a single item.
-    pub fn size(mut self, size: usize) -> Self {
-        self.item_size = size;
         self
     }
     // append the configured prefix to the output buffer.

@@ -1,20 +1,20 @@
 // -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-
 #[macro_export]
+
 macro_rules! json_response [
-    (
-        $struct_name:ident,
-        $pool:expr,
-        $sql:literal,
-        $( $arg:expr ),*
+    ( $item_struct:path,
+      $pool:expr,
+      $sql:literal,
+      $( $arg:expr ),*
     ) => ({
         HttpResponse::Ok()
             .content_type("application/json")
             .streaming(
                 $crate::SqlxStream::new(
                     $pool,
-                    |pool| {
+                    move |pool| {
                         sqlx::query_as!(
-                            $struct_name,
+                            $item_struct,
                             $sql,
                             $( $arg, )*
                         )
@@ -22,16 +22,15 @@ macro_rules! json_response [
                     },
                     |buf: &mut BytesWriter, row| {
                         serde_json::to_writer(buf, row)
-                            .map_err(ErrorInternalServerError)
+                            .map_err(actix_web::error::ErrorInternalServerError)
                     },
                 )
             )
     });
-    (
-        $struct_name:ident,
-        $pool:expr,
-        $sql:expr,
-        $( $arg:expr ),*
+    ( $item_struct:path,
+      $pool:expr,
+      $sql:expr,
+      $( $arg:expr ),*
     ) => ({
         HttpResponse::Ok()
             .content_type("application/json")
@@ -39,14 +38,14 @@ macro_rules! json_response [
                 $crate::SqlxStreamDyn::new(
                     $pool,
                     $sql,
-                    |pool,sql| {
-                        sqlx::query_as::<_, $struct_name>(sql)
+                    move |pool,sql| {
+                        sqlx::query_as::<_, $item_struct>(sql)
                             $( .bind($arg) )*
                             .fetch(pool)
                     },
                     |buf: &mut BytesWriter, row| {
                         serde_json::to_writer(buf, row)
-                            .map_err(ErrorInternalServerError)
+                            .map_err(actix_web::error::ErrorInternalServerError)
                     },
                 )
             )
@@ -55,17 +54,16 @@ macro_rules! json_response [
 
 #[macro_export]
 macro_rules! json_stream [
-    (
-        $struct_name:ident,
-        $pool:expr,
-        $sql:literal,
-        $( $arg:expr ),*
+    ( $item_struct:path,
+      $pool:expr,
+      $sql:literal,
+      $( $arg:expr ),*
     ) => ({
         $crate::SqlxStream::new(
             $pool,
-            |pool| {
+            move |pool| {
                 sqlx::query_as!(
-                    $struct_name,
+                    $item_struct,
                     $sql,
                     $( $arg, )*
                 )
@@ -73,27 +71,26 @@ macro_rules! json_stream [
             },
             |buf: &mut BytesWriter, row| {
                 serde_json::to_writer(buf, row)
-                    .map_err(ErrorInternalServerError)
+                    .map_err(actix_web::error::ErrorInternalServerError)
             },
         )
     });
-    (
-        $struct_name:ident,
-        $pool:expr,
-        $sql:expr,
-        $( $arg:expr ),*
+    ( $item_struct:path,
+      $pool:expr,
+      $sql:expr,
+      $( $arg:expr ),*
     ) => ({
         $crate::SqlxStreamDyn::new(
             $pool,
             $sql,
-            |pool,sql| {
-                sqlx::query_as::<_, $struct_name>(sql)
+            move |pool,sql| {
+                sqlx::query_as::<_, $item_struct>(sql)
                     $( .bind($arg) )*
                     .fetch(pool)
             },
             |buf: &mut BytesWriter, row| {
                 serde_json::to_writer(buf, row)
-                    .map_err(ErrorInternalServerError)
+                    .map_err(actix_web::error::ErrorInternalServerError)
             },
         )
     });
@@ -101,30 +98,28 @@ macro_rules! json_stream [
 
 #[macro_export]
 macro_rules! query_stream [
-    (
-        $pool:expr,
-        $sql:literal,
-        $( $arg:expr ),*
+    ( $pool:expr,
+      $sql:literal,
+      $( $arg:expr ),*
     ) => ({
         $crate::RowStream::make(
             $pool,
-            |pool| {
+            move |pool| {
                 sqlx::query(sql)
                     $( .bind($arg) )*
                     .fetch(pool)
             }
         )
     });
-    (
-        $struct_name:ident,
-        $pool:expr,
-        $sql:expr,
-        $( $arg:expr ),*
+    ( $item_struct:path,
+      $pool:expr,
+      $sql:expr,
+      $( $arg:expr ),*
     ) => ({
         $crate::RowStreamDyn::make(
             $pool,
             $sql,
-            |pool,sql| {
+            move |pool,sql| {
                 sqlx::query(sql)
                     $( .bind($arg) )*
                     .fetch(pool)
@@ -135,18 +130,17 @@ macro_rules! query_stream [
 
 #[macro_export]
 macro_rules! query_as_stream [
-    (
-        $struct_name:ident,
-        $pool:expr,
-        $sql:literal,
-        $( $arg:expr ),*
+    ( $item_struct:path,
+      $pool:expr,
+      $sql:literal,
+      $( $arg:expr ),*
     ) => ({
         $crate::RowStreamDyn::make(
             $pool,
             $sql.to_string(),
             |pool,_sql| {
                 sqlx::query_as!(
-                    $struct_name,
+                    $item_struct,
                     $sql,
                     $( $arg ),*
                 )
@@ -154,17 +148,16 @@ macro_rules! query_as_stream [
             }
         )
     });
-    (
-        $struct_name:ident,
-        $pool:expr,
-        $sql:expr,
-        $( $arg:expr ),*
+    ( $item_struct:path,
+      $pool:expr,
+      $sql:expr,
+      $( $arg:expr ),*
     ) => ({
         $crate::RowStreamDyn::make(
             $pool,
             $sql,
-            |pool,sql| {
-                sqlx::query_as::<_, $struct_name>(sql)
+            move |pool,sql| {
+                sqlx::query_as::<_, $item_struct>(sql)
                     $( .bind($arg) )*
                     .fetch(pool)
             }
@@ -174,19 +167,18 @@ macro_rules! query_as_stream [
 
 #[macro_export]
 macro_rules! query_as_byte_stream [
-    (
-        $struct_name:ident,
-        $pool:expr,
-        $sql:literal,
-        $fn:expr,
-        $( $arg:expr ),*
+    ( $item_struct:path,
+      $pool:expr,
+      $sql:literal,
+      $fn:expr,
+      $( $arg:expr ),*
     ) => ({
         $crate::ByteStream::new(
             $crate::RowStream::make(
                 $pool,
-                |pool| {
+                move |pool| {
                     sqlx::query_as!(
-                        $struct_name,
+                        $item_struct,
                         $sql,
                         $( $arg ),*
                     )
@@ -196,19 +188,18 @@ macro_rules! query_as_byte_stream [
             $fn,
         )
     });
-    (
-        $struct_name:ident,
-        $pool:expr,
-        $sql:expr,
-        $fn:expr,
-        $( $arg:expr ),*
+    ( $item_struct:path,
+      $pool:expr,
+      $sql:expr,
+      $fn:expr,
+      $( $arg:expr ),*
     ) => ({
         $crate::ByteStream::new(
             $crate::RowStreamDyn::make(
                 $pool,
                 $sql,
-                |pool,sql| {
-                    sqlx::query_as::<_, $struct_name>(sql)
+                move |pool,sql| {
+                    sqlx::query_as::<_, $item_struct>(sql)
                         $( .bind($arg) )*
                         .fetch(pool)
                 },
@@ -220,16 +211,15 @@ macro_rules! query_as_byte_stream [
 
 #[macro_export]
 macro_rules! query_byte_stream [
-    (
-        $pool:expr,
-        $sql:literal,
-        $fn:expr,
-        $( $arg:expr ),*
+    ( $pool:expr,
+      $sql:literal,
+      $fn:expr,
+      $( $arg:expr ),*
     ) => ({
         $crate::ByteStream::new(
             $crate::RowStream::make(
                 $pool,
-                |pool| {
+                move |pool| {
                     sqlx::query!(
                         $sql,
                         $( $arg ),*
@@ -240,17 +230,16 @@ macro_rules! query_byte_stream [
             $fn,
         )
     });
-    (
-        $pool:expr,
-        $sql:expr,
-        $fn:expr,
-        $( $arg:expr ),*
+    ( $pool:expr,
+      $sql:expr,
+      $fn:expr,
+      $( $arg:expr ),*
     ) => ({
         $crate::ByteStream::new(
             $crate::RowStreamDyn::make(
                 $pool,
                 $sql,
-                |pool,sql| {
+                move |pool,sql| {
                     sqlx::query::<_>(sql)
                         $( .bind($arg) )*
                         .fetch(pool)
