@@ -4,8 +4,6 @@
 mod macros;
 mod bytestream;
 mod rowstream;
-mod sqlxstream;
 
 pub use bytestream::*;
 pub use rowstream::*;
-pub use sqlxstream::*;

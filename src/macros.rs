@@ -2,15 +2,18 @@
 #[macro_export]
 
 macro_rules! json_response [
+    // Note: sqlx::query_as!() must have literal parameters, otherwise
+    // it causes error: cannot return value referencing local data
+    // `param`.
     ( $item_struct:path,
       $pool:expr,
       $sql:literal,
-      $( $arg:expr ),*
+      $( $arg:literal ),*
     ) => ({
         HttpResponse::Ok()
             .content_type("application/json")
             .streaming(
-                $crate::SqlxStream::new(
+                $crate::ByteStream::new(
                     $pool,
                     move |pool| {
                         sqlx::query_as!(
@@ -35,7 +38,7 @@ macro_rules! json_response [
         HttpResponse::Ok()
             .content_type("application/json")
             .streaming(
-                $crate::SqlxStreamDyn::new(
+                $crate::ByteStreamDyn::new(
                     $pool,
                     $sql,
                     move |pool,sql| {
@@ -57,9 +60,9 @@ macro_rules! json_stream [
     ( $item_struct:path,
       $pool:expr,
       $sql:literal,
-      $( $arg:expr ),*
+      $( $arg:literal ),*
     ) => ({
-        $crate::SqlxStream::new(
+        $crate::ByteStream::new(
             $pool,
             move |pool| {
                 sqlx::query_as!(
@@ -80,7 +83,7 @@ macro_rules! json_stream [
       $sql:expr,
       $( $arg:expr ),*
     ) => ({
-        $crate::SqlxStreamDyn::new(
+        $crate::ByteStreamDyn::new(
             $pool,
             $sql,
             move |pool,sql| {
@@ -133,7 +136,7 @@ macro_rules! query_as_stream [
     ( $item_struct:path,
       $pool:expr,
       $sql:literal,
-      $( $arg:expr ),*
+      $( $arg:literal ),*
     ) => ({
         $crate::RowStreamDyn::make(
             $pool,
@@ -171,7 +174,7 @@ macro_rules! query_as_byte_stream [
       $pool:expr,
       $sql:literal,
       $fn:expr,
-      $( $arg:expr ),*
+      $( $arg:literal ),*
     ) => ({
         $crate::ByteStream::new(
             $crate::RowStream::make(
@@ -214,7 +217,7 @@ macro_rules! query_byte_stream [
     ( $pool:expr,
       $sql:literal,
       $fn:expr,
-      $( $arg:expr ),*
+      $( $arg:literal ),*
     ) => ({
         $crate::ByteStream::new(
             $crate::RowStream::make(
