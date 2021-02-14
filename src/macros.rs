@@ -23,8 +23,8 @@ macro_rules! json_response [
                         )
                             .fetch(pool)
                     },
-                    |buf: &mut BytesWriter, row| {
-                        serde_json::to_writer(buf, row)
+                    |buf: &mut BytesWriter, &rec: $item_struct| {
+                        serde_json::to_writer(buf, rec)
                             .map_err(actix_web::error::ErrorInternalServerError)
                     },
                 )
@@ -46,8 +46,8 @@ macro_rules! json_response [
                             $( .bind($arg) )*
                             .fetch(pool)
                     },
-                    |buf: &mut BytesWriter, row| {
-                        serde_json::to_writer(buf, row)
+                    |buf: &mut BytesWriter, &rec: $item_struct| {
+                        serde_json::to_writer(buf, rec)
                             .map_err(actix_web::error::ErrorInternalServerError)
                     },
                 )

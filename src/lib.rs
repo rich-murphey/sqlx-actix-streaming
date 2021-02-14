@@ -3,6 +3,7 @@
 #[macro_use]
 mod macros;
 mod bytestream;
+mod bytestream2;
 mod rowstream;
 
 pub use bytestream::*;
