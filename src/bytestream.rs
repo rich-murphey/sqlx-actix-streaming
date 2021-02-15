@@ -417,7 +417,7 @@ where
 {
     const DEFAULT_ITEM_SIZE: usize = 2048;
     pub fn new(
-        pool: &Pool<DB>,
+        pool: Pool<DB>,
         params: Params,
         builder: impl for<'this> FnOnce(
             &'this <Box<Pool<DB>> as ::core::ops::Deref>::Target,

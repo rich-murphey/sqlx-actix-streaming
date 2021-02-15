@@ -1,7 +1,7 @@
 // -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-
 
 #[macro_export]
-macro_rules! json_query [
+macro_rules! json_response [
     ( $pool:expr,
       $params:ident,
       $query:expr,
@@ -25,7 +25,7 @@ macro_rules! json_query [
 ];
 
 #[macro_export]
-macro_rules! json_response [
+macro_rules! json_response_alt [
     // Note: sqlx::query_as!() must have literal parameters, otherwise
     // it causes error: cannot return value referencing local data
     // `param`.

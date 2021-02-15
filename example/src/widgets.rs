@@ -30,8 +30,8 @@ pub async fn widgets(
     web::Json(params): web::Json<WidgetParams>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    json_query!(
-        pool.as_ref(),
+    json_response!(
+        pool.as_ref().clone(),
         params,
         sqlx::query_as!(
             WidgetRecord,
@@ -47,7 +47,7 @@ pub async fn widgets2(
     web::Json(params): web::Json<WidgetParams>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    json_response!(
+    json_response_alt!(
         WidgetRecord,
         pool.as_ref(),
         "SELECT * FROM widgets LIMIT $1 OFFSET $2 ".to_owned(),
@@ -66,7 +66,7 @@ pub async fn widgets3(
         .streaming(
             // a stream of Bytes containing an JSON text array of sqlx records
             ByteStreamWithParams::new(
-                pool.as_ref(),
+                pool.as_ref().clone(),
                 params,
                 move |pool, params| {
                     // this is a a stream of WidgetRecords that borrows Pool

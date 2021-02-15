@@ -67,7 +67,7 @@ where
 {
     #[allow(dead_code)]
     pub fn make(
-        pool: &Pool<DB>,
+        pool: Pool<DB>,
         params: Params,
         inner_builder: impl for<'this> FnOnce(
             &'this <Box<Pool<DB>> as ::core::ops::Deref>::Target,
@@ -75,7 +75,7 @@ where
         ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
     ) -> Self {
         RowStreamWithParamsBuilder {
-            pool: Box::new(pool.clone()),
+            pool: Box::new(pool),
             params: Box::new(params),
             inner_builder,
         }
