@@ -1,6 +1,30 @@
 // -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-
-#[macro_export]
 
+#[macro_export]
+macro_rules! json_query [
+    ( $pool:expr,
+      $params:ident,
+      $query:expr,
+    ) => ({
+        HttpResponse::Ok()
+            .content_type("application/json")
+            .streaming(
+                $crate::ByteStreamWithParams::new(
+                    $pool,
+                    $params,
+                    move |pool, $params| {
+                        { $query }.fetch(pool)
+                    },
+                    |buf: &mut BytesWriter, rec| {
+                        serde_json::to_writer(buf, rec)
+                            .map_err(actix_web::error::ErrorInternalServerError)
+                    },
+                )
+            )
+    });
+];
+
+#[macro_export]
 macro_rules! json_response [
     // Note: sqlx::query_as!() must have literal parameters, otherwise
     // it causes error: cannot return value referencing local data

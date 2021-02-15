@@ -30,13 +30,15 @@ pub async fn widgets(
     web::Json(params): web::Json<WidgetParams>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    json_response!(
-        WidgetRecord,
+    json_query!(
         pool.as_ref(),
         params,
-        "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-        params.limit,
-        params.offset
+        sqlx::query_as!(
+            WidgetRecord,
+            "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
+            params.limit,
+            params.offset
+        ),
     )
 }
 
