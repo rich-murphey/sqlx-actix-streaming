@@ -38,7 +38,7 @@ pub async fn widgets(
             "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
             params.limit,
             params.offset
-        ),
+        )
     )
 }
 

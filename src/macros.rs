@@ -4,7 +4,7 @@
 macro_rules! json_response [
     ( $pool:expr,
       $params:ident,
-      $query:expr,
+      $query:expr
     ) => ({
         HttpResponse::Ok()
             .content_type("application/json")
