@@ -27,11 +27,14 @@ pub async fn widgets(
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
     json_response!(
-        WidgetRecord,
-        pool.as_ref(),
-        "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-        params.limit,
-        params.offset
+        pool.as_ref().clone(),
+        params,
+        sqlx::query_as!(
+            WidgetRecord,
+            "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
+            params.limit,
+            params.offset
+        ),
     )
 }
 ````
@@ -39,13 +42,13 @@ pub async fn widgets(
 Here is the same example using fewer macros:
 * [sqlx::query_as!().fetch()](https://docs.rs/sqlx/0.4.2/sqlx/macro.query_as.html) is a stream of WidgetRecords that borrows
   a database connection.
-* SqlxStream::new() wraps it with an owned database connection and
+* ByteStream::new() wraps it with an owned database connection and
   serializes each item to a stream of Bytes.
 * [HttpResponse.streaming()](https://docs.rs/actix-web/3.3.2/actix_web/dev/struct.HttpResponseBuilder.html#method.streaming) streams it to the client.
 
 Note the two closures.  The first closure generates a stream of
 WidgetRecords.  The second closure converts an individual WidgetRecord
-into json text using serde.  SqlxStream wraps them into a json array.
+into json text using serde.  ByteStream wraps them into a json array.
 
 ````rust
 #[post("/widgets")]
@@ -56,11 +59,12 @@ pub async fn widgets(
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(
-            // a stream of Bytes containing an JSON text array of sqlx records
-            SqlxStream::new(
-                pool.as_ref(),
-                move |pool| {
-                    // this is a a stream of WidgetRecords that borrows Pool
+            // this is a stream of text Bytes of a JSON array of sqlx records
+            ByteStreamWithParams::new(
+                pool.as_ref().clone(),
+                params,
+                move |pool, params| {
+                    // this is a a stream of WidgetRecords that borrows pool and params
                     sqlx::query_as!(
                         WidgetRecord,
                         "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",

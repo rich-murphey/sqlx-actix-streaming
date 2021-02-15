@@ -64,12 +64,12 @@ pub async fn widgets3(
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(
-            // a stream of Bytes containing an JSON text array of sqlx records
+            // this is a stream of text Bytes of a JSON array of sqlx records
             ByteStreamWithParams::new(
                 pool.as_ref().clone(),
                 params,
                 move |pool, params| {
-                    // this is a a stream of WidgetRecords that borrows Pool
+                    // this is a a stream of WidgetRecords that borrows pool and params
                     sqlx::query_as!(
                         WidgetRecord,
                         "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
