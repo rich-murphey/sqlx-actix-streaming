@@ -40,15 +40,15 @@ pub async fn widgets(
 ````
 
 Here is the same example using fewer macros:
-* [sqlx::query_as!().fetch()](https://docs.rs/sqlx/0.4.2/sqlx/macro.query_as.html) is a stream of WidgetRecords that borrows
-  a database connection.
-* ByteStream::new() wraps it with an owned database connection and
-  serializes each item to a stream of Bytes.
-* [HttpResponse.streaming()](https://docs.rs/actix-web/3.3.2/actix_web/dev/struct.HttpResponseBuilder.html#method.streaming) streams it to the client.
+* [sqlx::query_as!()](https://docs.rs/sqlx/0.4.2/sqlx/macro.query_as.html) is a stream of WidgetRecords that borrows
+  a database connection and parameters.
+* ByteStreamWithParams::new() wraps it with an owned database
+  connection and owned parameters,  serializes each item to a stream of Bytes.
+* [HttpResponse.streaming()](https://docs.rs/actix-web/3.3.2/actix_web/dev/struct.HttpResponseBuilder.html#method.streaming) streams it to the HTTP client.
 
 Note the two closures.  The first closure generates a stream of
 WidgetRecords.  The second closure converts an individual WidgetRecord
-into json text using serde.  ByteStream wraps them into a json array.
+into json text using serde.  ByteStreamWithParams converts them to a json array.
 
 ````rust
 #[post("/widgets")]
