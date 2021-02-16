@@ -10,6 +10,7 @@ pub struct WidgetRecord {
     pub name: String,
     pub description: String,
 }
+
 #[derive(Deserialize, Serialize)]
 pub struct WidgetParams {
     pub offset: i64,
@@ -42,7 +43,7 @@ pub async fn widgets2(
         .content_type("application/json")
         .streaming(
             // this is a stream of text Bytes of a JSON array of sqlx records
-            ByteStreamWithParams::new(
+            ByteStream::bind(
                 pool.as_ref().clone(),
                 params,
                 move |pool, params| {
@@ -79,8 +80,8 @@ pub async fn widgetsref(
 ) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("application/json")
-        .streaming(ByteStreamDyn::new(
-            pool.as_ref(),
+        .streaming(ByteStream::<_, _, _, ()>::sql(
+            pool.as_ref().clone(),
             "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
             move |pool, sql| {
                 sqlx::query(sql)
@@ -106,7 +107,7 @@ pub async fn widget_table(
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(
-            ByteStreamWithParams::new(
+            ByteStream::bind(
                 pool.as_ref().clone(),
                 params,
                 move |pool, params| {

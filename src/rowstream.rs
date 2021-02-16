@@ -25,13 +25,13 @@ where
 {
     #[allow(dead_code)]
     pub fn make(
-        pool: &Pool<DB>,
+        pool: Pool<DB>,
         inner_builder: impl for<'this> FnOnce(
             &'this <Box<Pool<DB>> as ::core::ops::Deref>::Target,
         ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
     ) -> Self {
         RowStreamBuilder {
-            pool: Box::new(pool.clone()),
+            pool: Box::new(pool),
             inner_builder,
         }
         .build()
@@ -49,7 +49,7 @@ where
 }
 
 #[ouroboros::self_referencing]
-pub struct RowStreamWithParams<DB, Row, Params>
+pub struct BoundRowStream<DB, Row, Params>
 where
     DB: sqlx::Database,
     Params: 'static,
@@ -60,7 +60,7 @@ where
     #[covariant] // Box is covariant.
     inner: BoxStream<'this, Result<Row, sqlx::Error>>,
 }
-impl<DB, Row, Params> RowStreamWithParams<DB, Row, Params>
+impl<DB, Row, Params> BoundRowStream<DB, Row, Params>
 where
     DB: sqlx::Database,
     Params: 'static,
@@ -74,7 +74,7 @@ where
             &'this <Box<Params> as ::core::ops::Deref>::Target,
         ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
     ) -> Self {
-        RowStreamWithParamsBuilder {
+        BoundRowStreamBuilder {
             pool: Box::new(pool),
             params: Box::new(params),
             inner_builder,
@@ -82,7 +82,7 @@ where
         .build()
     }
 }
-impl<DB, Row, Params> Stream for RowStreamWithParams<DB, Row, Params>
+impl<DB, Row, Params> Stream for BoundRowStream<DB, Row, Params>
 where
     DB: sqlx::Database,
     Params: 'static,
@@ -95,7 +95,7 @@ where
 }
 
 #[ouroboros::self_referencing]
-pub struct RowStreamDyn<DB, Row>
+pub struct SqlRowStream<DB, Row>
 where
     DB: sqlx::Database,
 {
@@ -105,28 +105,28 @@ where
     #[covariant] // Box is covariant.
     inner: BoxStream<'this, Result<Row, sqlx::Error>>,
 }
-impl<DB, Row> RowStreamDyn<DB, Row>
+impl<DB, Row> SqlRowStream<DB, Row>
 where
     DB: sqlx::Database,
 {
     #[allow(dead_code)]
     pub fn make(
-        pool: &Pool<DB>,
+        pool: Pool<DB>,
         sql: impl ToString,
         inner_builder: impl for<'this> FnOnce(
             &'this <Box<Pool<DB>> as ::core::ops::Deref>::Target,
             &'this <Box<String> as ::core::ops::Deref>::Target,
         ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
     ) -> Self {
-        RowStreamDynBuilder {
-            pool: Box::new(pool.clone()),
+        SqlRowStreamBuilder {
+            pool: Box::new(pool),
             sql: Box::new(sql.to_string()),
             inner_builder,
         }
         .build()
     }
 }
-impl<DB, Row> Stream for RowStreamDyn<DB, Row>
+impl<DB, Row> Stream for SqlRowStream<DB, Row>
 where
     DB: sqlx::Database,
 {
