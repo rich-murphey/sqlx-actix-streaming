@@ -47,8 +47,11 @@ where
     DB: sqlx::Database,
     Params: 'static,
 {
+    // stream of rows
     RowStream(RowStream<DB, InnerValue>),
+    // stream of rows that owns a String containing SQL
     SqlRowStream(SqlRowStream<DB, InnerValue>),
+    // stream of rows that owns bound Parameters
     BoundRowStream(BoundRowStream<DB, InnerValue, Params>),
 }
 
