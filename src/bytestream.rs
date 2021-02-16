@@ -17,6 +17,17 @@ use std::marker::PhantomData;
 use std::pin::Pin;
 
 pub struct BytesWriter(pub BytesMut);
+impl BytesWriter {
+    #![allow(dead_code)]
+    #[inline]
+    pub fn finish(self) -> BytesMut {
+        self.0
+    }
+    #[inline]
+    pub fn freeze(mut self) -> Bytes {
+        self.0.split().freeze()
+    }
+}
 
 impl Write for BytesWriter {
     #[inline]

@@ -1,4 +1,9 @@
-use actix_web::{error::ErrorInternalServerError, *};
+use actix_web::{
+    error::ErrorInternalServerError,
+    web::{BufMut, BytesMut},
+    *,
+};
+use futures::{future, stream, StreamExt};
 use serde::*;
 use sqlx::{postgres::*, prelude::*};
 use sqlx_actix_streaming::*;
@@ -133,9 +138,56 @@ pub async fn widget_table(
         )
 }
 
+// This is very inefficient; however, it shows how the json array can
+// be constructed using stream combinitors.
+#[post("/combinators")]
+pub async fn combinators(
+    web::Json(params): web::Json<WidgetParams>,
+    pool: web::Data<PgPool>,
+) -> HttpResponse {
+    HttpResponse::Ok()
+        .content_type("application/json")
+        .streaming(
+            stream::once(future::ready({
+                let mut b = BytesMut::new();
+                b.put_u8(b'[');
+                Ok(b.freeze())
+            }))
+            .chain(
+                BoundRowStream::make(pool.as_ref().clone(), params, move |pool, params| {
+                    sqlx::query_as!(
+                        WidgetRecord,
+                        "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
+                        params.limit,
+                        params.offset
+                    )
+                    .fetch(pool)
+                })
+                .enumerate()
+                .map(|(i, item)| {
+                    item.map(|row| {
+                        let mut writer = BytesWriter(BytesMut::new());
+                        if i > 0 {
+                            writer.0.put_u8(b',');
+                        }
+                        serde_json::to_writer(&mut writer, &row).ok();
+                        writer.freeze()
+                    })
+                    .map_err(ErrorInternalServerError)
+                }),
+            )
+            .chain(stream::once(future::ready({
+                let mut b = BytesMut::new();
+                b.put_u8(b']');
+                Ok(b.freeze())
+            }))),
+        )
+}
+
 pub fn service(cfg: &mut web::ServiceConfig) {
     cfg.service(widgets);
     cfg.service(widgets2);
     cfg.service(widgetsref);
     cfg.service(widget_table);
+    cfg.service(combinators);
 }
