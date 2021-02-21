@@ -18,8 +18,7 @@ where
     #[covariant] // Box is covariant.
     inner: BoxStream<'this, Result<Item, sqlx::Error>>,
 }
-impl<Bindings, Item> SqlxStream<Bindings, Item>
-{
+impl<Bindings, Item> SqlxStream<Bindings, Item> {
     #[allow(dead_code)]
     pub fn make(
         params: Bindings,
@@ -34,8 +33,7 @@ impl<Bindings, Item> SqlxStream<Bindings, Item>
         .build()
     }
 }
-impl<Bindings, Item> Stream for SqlxStream<Bindings, Item>
-{
+impl<Bindings, Item> Stream for SqlxStream<Bindings, Item> {
     type Item = Result<Item, sqlx::Error>;
     #[inline]
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {

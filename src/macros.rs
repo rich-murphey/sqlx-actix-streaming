@@ -55,9 +55,9 @@ macro_rules! json_response_alt [
         HttpResponse::Ok()
             .content_type("application/json")
             .streaming(
-                $crate::byte_stream(
-                    $pool,
-                    move |pool| {
+                $crate::ByteStream::new(
+                    ($pool,),
+                    move |(pool,)| {
                         sqlx::query_as!(
                             $item_struct,
                             $sql,
@@ -81,10 +81,9 @@ macro_rules! json_response_alt [
         HttpResponse::Ok()
             .content_type("application/json")
             .streaming(
-                $crate::bind_byte_stream(
-                    $pool,
-                    $params,
-                    move |pool, $params| {
+                $crate::ByteStream::new(
+                    ($pool, $params),
+                    move |(pool, $params)| {
                         sqlx::query_as!(
                             $item_struct,
                             $sql,
@@ -107,10 +106,9 @@ macro_rules! json_response_alt [
         HttpResponse::Ok()
             .content_type("application/json")
             .streaming(
-                $crate::sql_byte_stream(
-                    $pool,
-                    $sql,
-                    move |pool,sql| {
+                $crate::ByteStream::new(
+                    ($pool, $sql),
+                    move |(pool, sql)| {
                         sqlx::query_as::<_, $item_struct>(sql)
                             $( .bind($arg) )*
                             .fetch(pool)
@@ -131,9 +129,9 @@ macro_rules! json_stream [
       $sql:literal,
       $( $arg:literal ),*
     ) => ({
-        $crate::byte_stream(
-            $pool,
-            move |pool| {
+        $crate::ByteStream::new(
+            ($pool,),
+            move |(pool,)| {
                 sqlx::query_as!(
                     $item_struct,
                     $sql,
@@ -152,10 +150,9 @@ macro_rules! json_stream [
       $sql:expr,
       $( $arg:expr ),*
     ) => ({
-        $crate::sql_byte_stream(
-            $pool,
-            $sql,
-            move |pool,sql| {
+        $crate::ByteStream::new(
+            ($pool, $sql),
+            move |(pool, sql)| {
                 sqlx::query_as::<_, $item_struct>(sql)
                     $( .bind($arg) )*
                     .fetch(pool)
@@ -188,10 +185,9 @@ macro_rules! query_stream [
       $sql:expr,
       $( $arg:expr ),*
     ) => ({
-        $crate::SqlRowStream::make(
-            $pool,
-            $sql,
-            move |pool,sql| {
+        $crate::RowStream::make(
+            ($pool, $sql),
+            move |(pool, sql)| {
                 sqlx::query(sql)
                     $( .bind($arg) )*
                     .fetch(pool)
@@ -207,10 +203,9 @@ macro_rules! query_as_stream [
       $sql:literal,
       $( $arg:literal ),*
     ) => ({
-        $crate::SqlRowStream::make(
-            $pool,
-            $sql.to_string(),
-            |pool,_sql| {
+        $crate::RowStream::make(
+            ($pool, $sql.to_string()),
+            |(pool, _sql)| {
                 sqlx::query_as!(
                     $item_struct,
                     $sql,
@@ -225,10 +220,9 @@ macro_rules! query_as_stream [
       $sql:expr,
       $( $arg:expr ),*
     ) => ({
-        $crate::SqlRowStream::make(
-            $pool,
-            $sql,
-            move |pool,sql| {
+        $crate::RowStream::make(
+            ($pool, $sql),
+            move |(pool, sql)| {
                 sqlx::query_as::<_, $item_struct>(sql)
                     $( .bind($arg) )*
                     .fetch(pool)
@@ -267,10 +261,9 @@ macro_rules! query_as_byte_stream [
       $( $arg:expr ),*
     ) => ({
         $crate::sql_byte_stream(
-            $crate::SqlRowStream::make(
-                $pool,
-                $sql,
-                move |pool,sql| {
+            $crate::RowStream::make(
+                ($pool, $sql),
+                move |(pool, sql)| {
                     sqlx::query_as::<_, $item_struct>(sql)
                         $( .bind($arg) )*
                         .fetch(pool)
@@ -308,10 +301,9 @@ macro_rules! query_byte_stream [
       $( $arg:expr ),*
     ) => ({
         $crate::sql_byte_stream(
-            $crate::SqlRowStream::make(
-                $pool,
-                $sql,
-                move |pool,sql| {
+            $crate::RowStream::make(
+                ($pool, $sql),
+                move |(pool, sql)| {
                     sqlx::query::<_>(sql)
                         $( .bind($arg) )*
                         .fetch(pool)
