@@ -104,7 +104,6 @@ where
 
 const BYTESTREAM_DEFAULT_ITEM_SIZE: usize = 2048;
 
-
 impl<DB, InnerValue, Serializer, Params> ByteStream<DB, InnerValue, Serializer, Params>
 where
     DB: sqlx::Database,
@@ -302,7 +301,7 @@ pub fn sql_byte_stream<DB, InnerValue, Serializer>(
         &'this <Box<String> as ::core::ops::Deref>::Target,
     ) -> BoxStream<'this, Result<InnerValue, sqlx::Error>>,
     serializer: Serializer,
-) -> ByteStream::<DB, InnerValue, Serializer, ()>
+) -> ByteStream<DB, InnerValue, Serializer, ()>
 where
     DB: sqlx::Database,
     Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
