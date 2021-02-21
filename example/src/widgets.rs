@@ -136,7 +136,7 @@ pub async fn widget_table(
 }
 
 // This is very inefficient; however, it shows how the json array can
-// be constructed using stream combinitors.
+// be constructed using stream combinators.
 #[post("/combinators")]
 pub async fn combinators(
     web::Json(params): web::Json<WidgetParams>,
@@ -151,7 +151,7 @@ pub async fn combinators(
                 Ok(b.freeze())
             }))
             .chain(
-                SqlxStream::make((pool.as_ref().clone(), params), move |(pool, params)| {
+                RowStream::make((pool.as_ref().clone(), params), move |(pool, params)| {
                     sqlx::query_as!(
                         WidgetRecord,
                         "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",

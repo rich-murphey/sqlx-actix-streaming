@@ -1,5 +1,5 @@
-// -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-
-use crate::SqlxStream;
+// -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-]
+use crate::RowStream;
 use actix_web::{
     error::ErrorInternalServerError,
     web::{Bytes, BytesMut},
@@ -41,13 +41,17 @@ impl Write for BytesWriter {
 
 #[derive(Debug)]
 pub enum State {
-    /// self.poll_next() has never been called.
+    /// Unused is the initial state of a new instance. Unused -> Empty: upon
+    /// self.poll_next().
     Unused,
-    /// inner.poll_next() has never returned an item.
+    /// Empty means self.poll_next() has been called at least once.
+    /// Empty -> NonEmpty: upon inner.poll_next() returning Ready(Ok(item).
     Empty,
-    /// inner.poll_next() has returned an item.
+    /// NonEmpty means inner.poll_next() has returned a Ready(Ok(item)
+    /// at least once. NonEmpty -> Done: upon inner.poll_next()
+    /// returninng Ready(None).
     NonEmpty,
-    /// inner.poll_next() has returned Ready(None).
+    /// Done means Done inner.poll_next() has returned Ready(None).
     Done,
 }
 
@@ -59,7 +63,7 @@ where
     InnerValue: 'static,
     Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
-    inner: Pin<Box<SqlxStream<Bindings, InnerValue>>>,
+    inner: Pin<Box<RowStream<Bindings, InnerValue>>>,
     serializer: Box<Serializer>,
     state: State,
     item_size: usize,
@@ -85,7 +89,7 @@ where
         serializer: Serializer,
     ) -> Self {
         Self {
-            inner: Box::pin(SqlxStream::make(bindings, builder)),
+            inner: Box::pin(RowStream::make(bindings, builder)),
             serializer: Box::new(serializer),
             state: State::Unused,
             item_size: BYTESTREAM_DEFAULT_ITEM_SIZE,

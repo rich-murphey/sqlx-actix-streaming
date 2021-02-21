@@ -9,32 +9,32 @@ pub use std::io::Write;
 use std::pin::Pin;
 
 #[ouroboros::self_referencing]
-pub struct SqlxStream<Bindings, Item>
+pub struct RowStream<Bindings, Row>
 where
     Bindings: 'static,
 {
-    params: Box<Bindings>,
-    #[borrows(params)]
+    bindings: Box<Bindings>,
+    #[borrows(bindings)]
     #[covariant] // Box is covariant.
-    inner: BoxStream<'this, Result<Item, sqlx::Error>>,
+    inner: BoxStream<'this, Result<Row, sqlx::Error>>,
 }
-impl<Bindings, Item> SqlxStream<Bindings, Item> {
+impl<Bindings, Row> RowStream<Bindings, Row> {
     #[allow(dead_code)]
     pub fn make(
-        params: Bindings,
+        bindings: Bindings,
         inner_builder: impl for<'this> FnOnce(
             &'this <Box<Bindings> as ::core::ops::Deref>::Target,
-        ) -> BoxStream<'this, Result<Item, sqlx::Error>>,
+        ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
     ) -> Self {
-        SqlxStreamBuilder {
-            params: Box::new(params),
+        RowStreamBuilder {
+            bindings: Box::new(bindings),
             inner_builder,
         }
         .build()
     }
 }
-impl<Bindings, Item> Stream for SqlxStream<Bindings, Item> {
-    type Item = Result<Item, sqlx::Error>;
+impl<Bindings, Row> Stream for RowStream<Bindings, Row> {
+    type Item = Result<Row, sqlx::Error>;
     #[inline]
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         self.with_inner_mut(|s| s.as_mut().poll_next(cx))
