@@ -186,7 +186,6 @@ where
             phantom: PhantomData,
         }
     }
-
     /// Set the prefix for the json array. '[' by default.
     #[inline]
     pub fn prefix<S: ToString>(mut self, s: S) -> Self {
@@ -223,7 +222,8 @@ where
     // return the buffered output bytes.
     #[inline]
     fn get_bytes(&mut self) -> Bytes {
-        self.buf.0.split().freeze()
+        self.buf.0.split()
+            .freeze()
     }
     // ensure capacity to write one additional item into the buffer.
     #[inline]
