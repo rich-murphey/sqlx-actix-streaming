@@ -222,8 +222,7 @@ where
     // return the buffered output bytes.
     #[inline]
     fn get_bytes(&mut self) -> Bytes {
-        self.buf.0.split()
-            .freeze()
+        self.buf.0.split().freeze()
     }
     // ensure capacity to write one additional item into the buffer.
     #[inline]
