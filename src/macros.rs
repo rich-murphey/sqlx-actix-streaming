@@ -9,10 +9,9 @@ macro_rules! json_response [
         HttpResponse::Ok()
             .content_type("application/json")
             .streaming(
-                $crate::bind_byte_stream(
-                    $pool,
-                    $params,
-                    move |pool, $params| {
+                $crate::ByteStream::new(
+                    ($pool, $params),
+                    move |(pool, $params)| {
                         { $query }.fetch(pool)
                     },
                     |buf: &mut BytesWriter, rec| {
@@ -30,10 +29,9 @@ macro_rules! byte_stream [
       $params:ident,
       $query:expr
     ) => ({
-        $crate::bind_byte_stream(
-            $pool,
-            $params,
-            move |pool, $params| {
+        $crate::ByteStream::new(
+            ($pool, $params),
+            move |(pool, $params)| {
                 { $query }.fetch(pool)
             },
             |buf: &mut BytesWriter, rec| {

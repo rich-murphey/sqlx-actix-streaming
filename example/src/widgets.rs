@@ -48,10 +48,9 @@ pub async fn widgets2(
         .content_type("application/json")
         .streaming(
             // this is a stream of text Bytes of a JSON array of sqlx records
-            bind_byte_stream(
-                pool.as_ref().clone(),
-                params,
-                move |pool, params| {
+            ByteStream::new(
+                (pool.as_ref().clone(), params),
+                move |(pool, params)| {
                     // this is a a stream of WidgetRecords that borrows pool and params
                     sqlx::query_as!(
                         WidgetRecord,
@@ -85,10 +84,9 @@ pub async fn widgetsref(
 ) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("application/json")
-        .streaming(sql_byte_stream(
-            pool.as_ref().clone(),
-            "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-            move |pool, sql| {
+        .streaming(ByteStream::new(
+            (pool.as_ref().clone(), "SELECT * FROM widgets LIMIT $1 OFFSET $2 "),
+            move |(pool, sql)| {
                 sqlx::query(sql)
                     .bind(params.limit)
                     .bind(params.offset)
@@ -112,10 +110,9 @@ pub async fn widget_table(
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(
-            bind_byte_stream(
-                pool.as_ref().clone(),
-                params,
-                move |pool, params| {
+            ByteStream::new(
+                (pool.as_ref().clone(), params),
+                move |(pool, params)| {
                     sqlx::query_as!(
                         WidgetRecord,
                         "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
@@ -154,7 +151,7 @@ pub async fn combinators(
                 Ok(b.freeze())
             }))
             .chain(
-                BoundRowStream::make(pool.as_ref().clone(), params, move |pool, params| {
+                SqlxStream::make((pool.as_ref().clone(), params), move |(pool, params)| {
                     sqlx::query_as!(
                         WidgetRecord,
                         "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",

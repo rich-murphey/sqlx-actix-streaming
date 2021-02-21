@@ -1,5 +1,5 @@
 // -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-
-use crate::{BoundRowStream, RowStream, SqlRowStream};
+use crate::SqlxStream;
 use actix_web::{
     error::ErrorInternalServerError,
     web::{Bytes, BytesMut},
@@ -11,9 +11,7 @@ use futures::{
 };
 #[cfg(feature = "logging")]
 use log::*;
-use sqlx::Pool;
 pub use std::io::Write;
-use std::marker::PhantomData;
 use std::pin::Pin;
 
 pub struct BytesWriter(pub BytesMut);
@@ -53,43 +51,15 @@ pub enum State {
     Done,
 }
 
-pub enum InnerStream<DB, InnerValue, Params>
-where
-    DB: sqlx::Database,
-    Params: 'static,
-{
-    // stream of rows
-    RowStream(RowStream<DB, InnerValue>),
-    // stream of rows that owns a String containing SQL
-    SqlRowStream(SqlRowStream<DB, InnerValue>),
-    // stream of rows that owns bound Parameters
-    BoundRowStream(BoundRowStream<DB, InnerValue, Params>),
-}
+const BYTESTREAM_DEFAULT_ITEM_SIZE: usize = 2048;
 
-impl<DB, InnerValue, Params> Stream for InnerStream<DB, InnerValue, Params>
+pub struct ByteStream<InnerValue, Serializer, Bindings>
 where
-    DB: sqlx::Database,
-    Params: 'static,
-{
-    type Item = Result<InnerValue, sqlx::Error>;
-
-    #[inline]
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        match self.get_mut() {
-            InnerStream::RowStream(inner) => inner.poll_next_unpin(cx),
-            InnerStream::SqlRowStream(inner) => inner.poll_next_unpin(cx),
-            InnerStream::BoundRowStream(inner) => inner.poll_next_unpin(cx),
-        }
-    }
-}
-
-pub struct ByteStream<DB, InnerValue, Serializer, Params>
-where
-    DB: sqlx::Database,
-    Params: 'static,
+    Bindings: 'static,
+    InnerValue: 'static,
     Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
-    inner: Pin<Box<InnerStream<DB, InnerValue, Params>>>,
+    inner: Pin<Box<SqlxStream<Bindings, InnerValue>>>,
     serializer: Box<Serializer>,
     state: State,
     item_size: usize,
@@ -99,17 +69,35 @@ where
     buf: BytesWriter,
     #[cfg(feature = "logging")]
     item_count: usize,
-    phantom: PhantomData<Box<Params>>,
 }
 
-const BYTESTREAM_DEFAULT_ITEM_SIZE: usize = 2048;
-
-impl<DB, InnerValue, Serializer, Params> ByteStream<DB, InnerValue, Serializer, Params>
+impl<InnerValue, Serializer, Bindings> ByteStream<InnerValue, Serializer, Bindings>
 where
-    DB: sqlx::Database,
-    Params: 'static,
+    Bindings: 'static,
     Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
+    #[inline]
+    pub fn new(
+        bindings: Bindings,
+        builder: impl for<'this> FnOnce(
+            &'this <Box<Bindings> as ::core::ops::Deref>::Target,
+        ) -> BoxStream<'this, Result<InnerValue, sqlx::Error>>,
+        serializer: Serializer,
+    ) -> Self {
+        Self {
+            inner: Box::pin(SqlxStream::make(bindings, builder)),
+            serializer: Box::new(serializer),
+            state: State::Unused,
+            item_size: BYTESTREAM_DEFAULT_ITEM_SIZE,
+            prefix: vec![b'['],
+            separator: vec![b','],
+            suffix: vec![b']'],
+            buf: BytesWriter(BytesMut::with_capacity(BYTESTREAM_DEFAULT_ITEM_SIZE)),
+            #[cfg(feature = "logging")]
+            item_count: 0,
+        }
+    }
+
     /// Set the prefix for the json array. '[' by default.
     #[inline]
     pub fn prefix<S: ToString>(mut self, s: S) -> Self {
@@ -214,105 +202,9 @@ where
     }
 }
 
-// do not use an associated function for these constructors because
-// some of them need to specify a concrete type for Params.
-
-#[inline]
-pub fn byte_stream<DB, InnerValue, Serializer>(
-    pool: Pool<DB>,
-    builder: impl for<'this> FnOnce(
-        &'this <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-    ) -> BoxStream<'this, Result<InnerValue, sqlx::Error>>,
-    serializer: Serializer,
-) -> ByteStream<DB, InnerValue, Serializer, ()>
+impl<InnerValue, Serializer, Bindings> Stream for ByteStream<InnerValue, Serializer, Bindings>
 where
-    DB: sqlx::Database,
-    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
-{
-    let inner = RowStream::make(pool, builder);
-    let inner = InnerStream::RowStream(inner);
-    ByteStream {
-        inner: Box::pin(inner),
-        serializer: Box::new(serializer),
-        state: State::Unused,
-        item_size: BYTESTREAM_DEFAULT_ITEM_SIZE,
-        prefix: vec![b'['],
-        separator: vec![b','],
-        suffix: vec![b']'],
-        buf: BytesWriter(BytesMut::with_capacity(BYTESTREAM_DEFAULT_ITEM_SIZE)),
-        #[cfg(feature = "logging")]
-        item_count: 0,
-        phantom: PhantomData,
-    }
-}
-
-#[inline]
-pub fn sql_byte_stream<DB, InnerValue, Serializer>(
-    pool: Pool<DB>,
-    sql: impl ToString,
-    builder: impl for<'this> FnOnce(
-        &'this <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-        &'this <Box<String> as ::core::ops::Deref>::Target,
-    ) -> BoxStream<'this, Result<InnerValue, sqlx::Error>>,
-    serializer: Serializer,
-) -> ByteStream<DB, InnerValue, Serializer, ()>
-where
-    DB: sqlx::Database,
-    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
-{
-    let inner = SqlRowStream::make(pool, sql, builder);
-    let inner = InnerStream::SqlRowStream(inner);
-    ByteStream {
-        inner: Box::pin(inner),
-        serializer: Box::new(serializer),
-        state: State::Unused,
-        item_size: BYTESTREAM_DEFAULT_ITEM_SIZE,
-        prefix: vec![b'['],
-        separator: vec![b','],
-        suffix: vec![b']'],
-        buf: BytesWriter(BytesMut::with_capacity(BYTESTREAM_DEFAULT_ITEM_SIZE)),
-        #[cfg(feature = "logging")]
-        item_count: 0,
-        phantom: PhantomData,
-    }
-}
-
-#[inline]
-pub fn bind_byte_stream<DB, InnerValue, Serializer, Params>(
-    pool: Pool<DB>,
-    params: Params,
-    builder: impl for<'this> FnOnce(
-        &'this <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-        &'this <Box<Params> as ::core::ops::Deref>::Target,
-    ) -> BoxStream<'this, Result<InnerValue, sqlx::Error>>,
-    serializer: Serializer,
-) -> ByteStream<DB, InnerValue, Serializer, Params>
-where
-    DB: sqlx::Database,
-    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
-    Params: 'static,
-{
-    ByteStream {
-        inner: Box::pin(InnerStream::BoundRowStream(BoundRowStream::make(
-            pool, params, builder,
-        ))),
-        serializer: Box::new(serializer),
-        state: State::Unused,
-        item_size: BYTESTREAM_DEFAULT_ITEM_SIZE,
-        prefix: vec![b'['],
-        separator: vec![b','],
-        suffix: vec![b']'],
-        buf: BytesWriter(BytesMut::with_capacity(BYTESTREAM_DEFAULT_ITEM_SIZE)),
-        #[cfg(feature = "logging")]
-        item_count: 0,
-        phantom: PhantomData,
-    }
-}
-
-impl<DB, InnerValue, Serializer, Params> Stream for ByteStream<DB, InnerValue, Serializer, Params>
-where
-    DB: sqlx::Database,
-    Params: 'static,
+    Bindings: 'static,
     Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
     type Item = Result<Bytes, actix_web::Error>;
@@ -335,10 +227,9 @@ where
 }
 
 #[cfg(feature = "logging")]
-impl<DB, InnerValue, Serializer, Params> Drop for ByteStream<DB, InnerValue, Serializer, Params>
+impl<InnerValue, Serializer, Bindings> Drop for ByteStream<InnerValue, Serializer, Bindings>
 where
-    DB: sqlx::Database,
-    Params: 'static,
+    Bindings: 'static,
     Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
 {
     #[inline]

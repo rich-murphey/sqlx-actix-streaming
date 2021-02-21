@@ -5,132 +5,38 @@ use futures::{
     stream::BoxStream,
     task::{Context, Poll},
 };
-use sqlx::Pool;
 pub use std::io::Write;
 use std::pin::Pin;
 
 #[ouroboros::self_referencing]
-pub struct RowStream<DB, Row>
+pub struct SqlxStream<Bindings, Item>
 where
-    DB: sqlx::Database,
+    Bindings: 'static,
 {
-    pool: Box<Pool<DB>>,
-    #[borrows(pool)]
+    params: Box<Bindings>,
+    #[borrows(params)]
     #[covariant] // Box is covariant.
-    inner: BoxStream<'this, Result<Row, sqlx::Error>>,
+    inner: BoxStream<'this, Result<Item, sqlx::Error>>,
 }
-impl<DB, Row> RowStream<DB, Row>
-where
-    DB: sqlx::Database,
+impl<Bindings, Item> SqlxStream<Bindings, Item>
 {
     #[allow(dead_code)]
     pub fn make(
-        pool: Pool<DB>,
+        params: Bindings,
         inner_builder: impl for<'this> FnOnce(
-            &'this <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-        ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
+            &'this <Box<Bindings> as ::core::ops::Deref>::Target,
+        ) -> BoxStream<'this, Result<Item, sqlx::Error>>,
     ) -> Self {
-        RowStreamBuilder {
-            pool: Box::new(pool),
-            inner_builder,
-        }
-        .build()
-    }
-}
-impl<DB, Row> Stream for RowStream<DB, Row>
-where
-    DB: sqlx::Database,
-{
-    type Item = Result<Row, sqlx::Error>;
-    #[inline]
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        self.with_inner_mut(|s| s.as_mut().poll_next(cx))
-    }
-}
-
-#[ouroboros::self_referencing]
-pub struct BoundRowStream<DB, Row, Params>
-where
-    DB: sqlx::Database,
-    Params: 'static,
-{
-    pool: Box<Pool<DB>>,
-    params: Box<Params>,
-    #[borrows(pool, params)]
-    #[covariant] // Box is covariant.
-    inner: BoxStream<'this, Result<Row, sqlx::Error>>,
-}
-impl<DB, Row, Params> BoundRowStream<DB, Row, Params>
-where
-    DB: sqlx::Database,
-    Params: 'static,
-{
-    #[allow(dead_code)]
-    pub fn make(
-        pool: Pool<DB>,
-        params: Params,
-        inner_builder: impl for<'this> FnOnce(
-            &'this <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-            &'this <Box<Params> as ::core::ops::Deref>::Target,
-        ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
-    ) -> Self {
-        BoundRowStreamBuilder {
-            pool: Box::new(pool),
+        SqlxStreamBuilder {
             params: Box::new(params),
             inner_builder,
         }
         .build()
     }
 }
-impl<DB, Row, Params> Stream for BoundRowStream<DB, Row, Params>
-where
-    DB: sqlx::Database,
-    Params: 'static,
+impl<Bindings, Item> Stream for SqlxStream<Bindings, Item>
 {
-    type Item = Result<Row, sqlx::Error>;
-    #[inline]
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        self.with_inner_mut(|s| s.as_mut().poll_next(cx))
-    }
-}
-
-#[ouroboros::self_referencing]
-pub struct SqlRowStream<DB, Row>
-where
-    DB: sqlx::Database,
-{
-    pool: Box<Pool<DB>>,
-    sql: Box<String>,
-    #[borrows(pool, sql)]
-    #[covariant] // Box is covariant.
-    inner: BoxStream<'this, Result<Row, sqlx::Error>>,
-}
-impl<DB, Row> SqlRowStream<DB, Row>
-where
-    DB: sqlx::Database,
-{
-    #[allow(dead_code)]
-    pub fn make(
-        pool: Pool<DB>,
-        sql: impl ToString,
-        inner_builder: impl for<'this> FnOnce(
-            &'this <Box<Pool<DB>> as ::core::ops::Deref>::Target,
-            &'this <Box<String> as ::core::ops::Deref>::Target,
-        ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
-    ) -> Self {
-        SqlRowStreamBuilder {
-            pool: Box::new(pool),
-            sql: Box::new(sql.to_string()),
-            inner_builder,
-        }
-        .build()
-    }
-}
-impl<DB, Row> Stream for SqlRowStream<DB, Row>
-where
-    DB: sqlx::Database,
-{
-    type Item = Result<Row, sqlx::Error>;
+    type Item = Result<Item, sqlx::Error>;
     #[inline]
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         self.with_inner_mut(|s| s.as_mut().poll_next(cx))
