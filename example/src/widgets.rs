@@ -85,7 +85,7 @@ pub async fn widgetsref(
 ) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("application/json")
-        .streaming(ByteStream::<_, _, _, ()>::sql(
+        .streaming(sql_byte_stream(
             pool.as_ref().clone(),
             "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
             move |pool, sql| {

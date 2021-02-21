@@ -109,7 +109,7 @@ macro_rules! json_response_alt [
         HttpResponse::Ok()
             .content_type("application/json")
             .streaming(
-                $crate::ByteStream::<_, _, _, ()>::sql(
+                $crate::sql_byte_stream(
                     $pool,
                     $sql,
                     move |pool,sql| {
@@ -154,7 +154,7 @@ macro_rules! json_stream [
       $sql:expr,
       $( $arg:expr ),*
     ) => ({
-        $crate::ByteStream::<_, _, _, ()>::sql(
+        $crate::sql_byte_stream(
             $pool,
             $sql,
             move |pool,sql| {
