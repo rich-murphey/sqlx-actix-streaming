@@ -9,7 +9,7 @@ macro_rules! json_response [
         HttpResponse::Ok()
             .content_type("application/json")
             .streaming(
-                $crate::ByteStream::bind(
+                $crate::bind_byte_stream(
                     $pool,
                     $params,
                     move |pool, $params| {
@@ -30,7 +30,7 @@ macro_rules! byte_stream [
       $params:ident,
       $query:expr
     ) => ({
-        $crate::ByteStream::bind(
+        $crate::bind_byte_stream(
             $pool,
             $params,
             move |pool, $params| {
@@ -57,7 +57,7 @@ macro_rules! json_response_alt [
         HttpResponse::Ok()
             .content_type("application/json")
             .streaming(
-                $crate::ByteStream::new(
+                $crate::byte_stream(
                     $pool,
                     move |pool| {
                         sqlx::query_as!(
@@ -83,7 +83,7 @@ macro_rules! json_response_alt [
         HttpResponse::Ok()
             .content_type("application/json")
             .streaming(
-                $crate::ByteStream::bind(
+                $crate::bind_byte_stream(
                     $pool,
                     $params,
                     move |pool, $params| {
@@ -133,7 +133,7 @@ macro_rules! json_stream [
       $sql:literal,
       $( $arg:literal ),*
     ) => ({
-        $crate::ByteStream::new(
+        $crate::byte_stream(
             $pool,
             move |pool| {
                 sqlx::query_as!(
@@ -247,7 +247,7 @@ macro_rules! query_as_byte_stream [
       $fn:expr,
       $( $arg:literal ),*
     ) => ({
-        $crate::ByteStream::new(
+        $crate::byte_stream(
             $crate::RowStream::make(
                 $pool,
                 move |pool| {
@@ -268,7 +268,7 @@ macro_rules! query_as_byte_stream [
       $fn:expr,
       $( $arg:expr ),*
     ) => ({
-        $crate::ByteStream::new(
+        $crate::sql_byte_stream(
             $crate::SqlRowStream::make(
                 $pool,
                 $sql,
@@ -290,7 +290,7 @@ macro_rules! query_byte_stream [
       $fn:expr,
       $( $arg:literal ),*
     ) => ({
-        $crate::ByteStream::new(
+        $crate::byte_stream(
             $crate::RowStream::make(
                 $pool,
                 move |pool| {
@@ -309,7 +309,7 @@ macro_rules! query_byte_stream [
       $fn:expr,
       $( $arg:expr ),*
     ) => ({
-        $crate::ByteStream::new(
+        $crate::sql_byte_stream(
             $crate::SqlRowStream::make(
                 $pool,
                 $sql,

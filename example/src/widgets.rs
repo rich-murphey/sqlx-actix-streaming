@@ -48,7 +48,7 @@ pub async fn widgets2(
         .content_type("application/json")
         .streaming(
             // this is a stream of text Bytes of a JSON array of sqlx records
-            ByteStream::bind(
+            bind_byte_stream(
                 pool.as_ref().clone(),
                 params,
                 move |pool, params| {
@@ -112,7 +112,7 @@ pub async fn widget_table(
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(
-            ByteStream::bind(
+            bind_byte_stream(
                 pool.as_ref().clone(),
                 params,
                 move |pool, params| {
