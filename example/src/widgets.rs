@@ -151,7 +151,7 @@ pub async fn combinators(
                 Ok(b.freeze())
             }))
             .chain(
-                RowStream::make((pool.as_ref().clone(), params), move |(pool, params)| {
+                RowStream::build((pool.as_ref().clone(), params), move |(pool, params)| {
                     sqlx::query_as!(
                         WidgetRecord,
                         "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",

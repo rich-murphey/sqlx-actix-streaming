@@ -19,18 +19,14 @@ where
     inner: BoxStream<'this, Result<Row, sqlx::Error>>,
 }
 impl<Bindings, Row> RowStream<Bindings, Row> {
-    #[allow(dead_code)]
-    pub fn make(
+    #[inline]
+    pub fn build(
         bindings: Bindings,
         inner_builder: impl for<'this> FnOnce(
             &'this <Box<Bindings> as ::core::ops::Deref>::Target,
         ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
     ) -> Self {
-        RowStreamBuilder {
-            bindings: Box::new(bindings),
-            inner_builder,
-        }
-        .build()
+        Self::new(Box::new(bindings), inner_builder)
     }
 }
 impl<Bindings, Row> Stream for RowStream<Bindings, Row> {

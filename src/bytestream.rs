@@ -89,7 +89,7 @@ where
         serializer: Serializer,
     ) -> Self {
         Self {
-            inner_stream: Box::pin(RowStream::make(bindings, builder)),
+            inner_stream: Box::pin(RowStream::build(bindings, builder)),
             serializer: Box::new(serializer),
             state: State::Unused,
 
