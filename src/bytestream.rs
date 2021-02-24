@@ -51,7 +51,7 @@ pub enum State {
     /// at least once. NonEmpty -> Done: upon inner.poll_next()
     /// returninng Ready(None).
     NonEmpty,
-    /// Done means Done inner.poll_next() has returned Ready(None).
+    /// Done means inner.poll_next() has returned Ready(None).
     Done,
 }
 
