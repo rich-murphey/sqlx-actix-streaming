@@ -68,7 +68,7 @@ where
     state: State,
     item_size: usize,
     prefix: Vec<u8>,
-    separator: Vec<u8>,
+    delimiter: Vec<u8>,
     suffix: Vec<u8>,
     buf: BytesWriter,
     #[cfg(feature = "logging")]
@@ -92,9 +92,10 @@ where
             inner: Box::pin(RowStream::make(bindings, builder)),
             serializer: Box::new(serializer),
             state: State::Unused,
+
             item_size: BYTESTREAM_DEFAULT_ITEM_SIZE,
             prefix: vec![b'['],
-            separator: vec![b','],
+            delimiter: vec![b','],
             suffix: vec![b']'],
             buf: BytesWriter(BytesMut::with_capacity(BYTESTREAM_DEFAULT_ITEM_SIZE)),
             #[cfg(feature = "logging")]
@@ -108,10 +109,10 @@ where
         self.prefix = s.to_string().into_bytes();
         self
     }
-    /// Set the separator for the json array elements. ',' by default.
+    /// Set the delimiter for the json array elements. ',' by default.
     #[inline]
-    pub fn separator<S: ToString>(mut self, s: S) -> Self {
-        self.separator = s.to_string().into_bytes();
+    pub fn delimiter<S: ToString>(mut self, s: S) -> Self {
+        self.delimiter = s.to_string().into_bytes();
         self
     }
     /// Set the suffix for the json array. ']' by default.
@@ -125,10 +126,10 @@ where
     fn put_prefix(&mut self) {
         self.buf.0.extend_from_slice(&self.prefix);
     }
-    // append the configured separator to the output buffer.
+    // append the configured delimiter to the output buffer.
     #[inline]
-    fn put_separator(&mut self) {
-        self.buf.0.extend_from_slice(&self.separator);
+    fn put_delimiter(&mut self) {
+        self.buf.0.extend_from_slice(&self.delimiter);
     }
     // append the configured suffix to the output buffer.
     #[inline]
@@ -166,7 +167,7 @@ where
                     }
                     match self.state {
                         Empty => self.state = NonEmpty,
-                        NonEmpty => self.put_separator(),
+                        NonEmpty => self.put_delimiter(),
                         _ => (),
                     };
                     let initial_len = self.buf.0.len();
