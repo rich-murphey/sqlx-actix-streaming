@@ -45,25 +45,25 @@ pub enum State {
     /// self.poll_next().
     Unused,
     /// Empty means self.poll_next() has been called at least once.
-    /// Empty -> NonEmpty: upon inner.poll_next() returning Ready(Ok(item).
+    /// Empty -> NonEmpty: upon inner_stream.poll_next() returning Ready(Ok(item).
     Empty,
-    /// NonEmpty means inner.poll_next() has returned a Ready(Ok(item)
-    /// at least once. NonEmpty -> Done: upon inner.poll_next()
+    /// NonEmpty means inner_stream.poll_next() has returned a Ready(Ok(item)
+    /// at least once. NonEmpty -> Done: upon inner_stream.poll_next()
     /// returninng Ready(None).
     NonEmpty,
-    /// Done means inner.poll_next() has returned Ready(None).
+    /// Done means inner_stream.poll_next() has returned Ready(None).
     Done,
 }
 
 const BYTESTREAM_DEFAULT_ITEM_SIZE: usize = 2048;
 
-pub struct ByteStream<InnerValue, Serializer, Bindings>
+pub struct ByteStream<InnerItem, Serializer, Bindings>
 where
     Bindings: 'static,
-    InnerValue: 'static,
-    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
+    InnerItem: 'static,
+    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
 {
-    inner: Pin<Box<RowStream<Bindings, InnerValue>>>,
+    inner_stream: Pin<Box<RowStream<Bindings, InnerItem>>>,
     serializer: Box<Serializer>,
     state: State,
     item_size: usize,
@@ -75,21 +75,21 @@ where
     item_count: usize,
 }
 
-impl<InnerValue, Serializer, Bindings> ByteStream<InnerValue, Serializer, Bindings>
+impl<InnerItem, Serializer, Bindings> ByteStream<InnerItem, Serializer, Bindings>
 where
     Bindings: 'static,
-    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
+    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
 {
     #[inline]
     pub fn new(
         bindings: Bindings,
         builder: impl for<'this> FnOnce(
             &'this <Box<Bindings> as ::core::ops::Deref>::Target,
-        ) -> BoxStream<'this, Result<InnerValue, sqlx::Error>>,
+        ) -> BoxStream<'this, Result<InnerItem, sqlx::Error>>,
         serializer: Serializer,
     ) -> Self {
         Self {
-            inner: Box::pin(RowStream::make(bindings, builder)),
+            inner_stream: Box::pin(RowStream::make(bindings, builder)),
             serializer: Box::new(serializer),
             state: State::Unused,
 
@@ -102,7 +102,6 @@ where
             item_count: 0,
         }
     }
-
     /// Set the prefix for the json array. '[' by default.
     #[inline]
     pub fn prefix<S: ToString>(mut self, s: S) -> Self {
@@ -148,7 +147,7 @@ where
     }
     // use the given closure to write a record to the buffer.
     #[inline]
-    fn write_record(&mut self, record: &InnerValue) -> Result<(), actix_web::Error> {
+    fn write_record(&mut self, record: &InnerItem) -> Result<(), actix_web::Error> {
         (self.serializer)(&mut self.buf, record)
     }
     #[inline]
@@ -159,7 +158,7 @@ where
         use Poll::*;
         use State::*;
         loop {
-            match self.inner.poll_next_unpin(cx) {
+            match self.inner_stream.poll_next_unpin(cx) {
                 Ready(Some(Ok(record))) => {
                     #[cfg(feature = "logging")]
                     {
@@ -207,10 +206,10 @@ where
     }
 }
 
-impl<InnerValue, Serializer, Bindings> Stream for ByteStream<InnerValue, Serializer, Bindings>
+impl<InnerItem, Serializer, Bindings> Stream for ByteStream<InnerItem, Serializer, Bindings>
 where
     Bindings: 'static,
-    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
+    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
 {
     type Item = Result<Bytes, actix_web::Error>;
 
@@ -232,10 +231,10 @@ where
 }
 
 #[cfg(feature = "logging")]
-impl<InnerValue, Serializer, Bindings> Drop for ByteStream<InnerValue, Serializer, Bindings>
+impl<InnerItem, Serializer, Bindings> Drop for ByteStream<InnerItem, Serializer, Bindings>
 where
     Bindings: 'static,
-    Serializer: FnMut(&mut BytesWriter, &InnerValue) -> Result<(), actix_web::Error>,
+    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
 {
     #[inline]
     fn drop(&mut self) {
