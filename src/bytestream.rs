@@ -134,12 +134,12 @@ where
     fn bytes(&mut self) -> Bytes {
         self.buf.0.split().freeze()
     }
-    // ensure capacity to write one additional item into the buffer.
+    // ensure capacity to write one item into the buffer.
     #[inline]
     fn set_buf_size(&mut self) {
         self.buf.0.reserve(self.item_size);
     }
-    // use the given closure to write a record to the buffer.
+    // use the serializer to write one item to the buffer.
     #[inline]
     fn write_item(
         &mut self,
