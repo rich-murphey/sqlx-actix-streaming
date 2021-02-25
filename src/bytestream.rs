@@ -59,8 +59,8 @@ pub struct ByteStream<InnerStream, Serializer>
 where
     InnerStream: TryStream + Unpin,
     <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
-    Serializer:
-        FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error> + Unpin,
+    Serializer: FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error>
+        + Unpin,
 {
     inner_stream: InnerStream,
     serializer: Serializer,
@@ -78,8 +78,8 @@ impl<InnerStream, Serializer> ByteStream<InnerStream, Serializer>
 where
     InnerStream: TryStream + Unpin,
     <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
-    Serializer:
-        FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error> + Unpin,
+    Serializer: FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error>
+        + Unpin,
 {
     #[inline]
     pub fn new(inner_stream: InnerStream, serializer: Serializer) -> Self {
@@ -207,8 +207,8 @@ impl<InnerStream, Serializer> Stream for ByteStream<InnerStream, Serializer>
 where
     InnerStream: TryStream + Unpin,
     <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
-    Serializer:
-        FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error> + Unpin,
+    Serializer: FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error>
+        + Unpin,
 {
     type Item = Result<Bytes, actix_web::Error>;
 
@@ -234,8 +234,8 @@ impl<InnerStream, Serializer> Drop for ByteStream<InnerStream, Serializer>
 where
     InnerStream: TryStream + Unpin,
     <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
-    Serializer:
-        FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error> + Unpin,
+    Serializer: FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error>
+        + Unpin,
 {
     #[inline]
     fn drop(&mut self) {

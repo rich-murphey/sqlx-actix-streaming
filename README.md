@@ -59,19 +59,21 @@ pub async fn widgets(
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(
-            // this is a stream of text (Bytes) containing a JSON array of sqlx records
+            // a stream of text (Bytes) containing a JSON array of sqlx records
             ByteStream::new(
-                (pool.as_ref().clone(), params),
-                move |(pool, params)| {
-                    // this is a a stream of WidgetRecords that borrows pool and params
-                    sqlx::query_as!(
-                        WidgetRecord,
-                        "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-                        params.limit,
-                        params.offset
-                    )
-                    .fetch(pool)
-                },
+                // a stream of WidgetRecords that owns pool and params
+                RowStream::build(
+                    (pool.as_ref().clone(), params),
+                    // a stream of WidgetRecords that borrows pool and params
+                    move |(pool, params)| {
+                        sqlx::query_as!(
+                            WidgetRecord,
+                            "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
+                            params.limit,
+                            params.offset
+                        )
+                            .fetch(pool)
+                    }),
                 |buf: &mut BytesWriter, record: &WidgetRecord| {
                     // this writes a WidgetRecords as JSON text to the output buffer
                     serde_json::to_writer(buf, record).map_err(ErrorInternalServerError)
