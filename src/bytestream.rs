@@ -14,7 +14,6 @@ use std::pin::Pin;
 
 pub struct BytesWriter(pub BytesMut);
 impl BytesWriter {
-    #![allow(dead_code)]
     #[inline]
     pub fn finish(self) -> BytesMut {
         self.0

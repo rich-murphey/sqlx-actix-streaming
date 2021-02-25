@@ -7,29 +7,37 @@ use futures::{
 };
 pub use std::io::Write;
 use std::pin::Pin;
+use core::ops::Deref;
+use stable_deref_trait::StableDeref;
 
 #[ouroboros::self_referencing]
 pub struct RowStream<Bindings, Row>
 where
-    Bindings: 'static,
+    Bindings: Unpin + StableDeref + 'static,
 {
-    bindings: Box<Bindings>,
+    bindings: Bindings,
     #[borrows(bindings)]
-    #[covariant] // Box is covariant.
+    #[covariant] // StableDeref is covariant.
     inner: BoxStream<'this, Result<Row, sqlx::Error>>,
 }
-impl<Bindings, Row> RowStream<Bindings, Row> {
+impl<Bindings, Row> RowStream<Bindings, Row>
+where
+    Bindings: Unpin + StableDeref + 'static,
+{
     #[inline]
     pub fn build(
         bindings: Bindings,
         inner_builder: impl for<'this> FnOnce(
-            &'this <Box<Bindings> as ::core::ops::Deref>::Target,
+            &'this <Bindings as Deref>::Target,
         ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
     ) -> Self {
-        Self::new(Box::new(bindings), inner_builder)
+        Self::new(bindings, inner_builder)
     }
 }
-impl<Bindings, Row> Stream for RowStream<Bindings, Row> {
+impl<Bindings, Row> Stream for RowStream<Bindings, Row>
+where
+    Bindings: Unpin + StableDeref + 'static,
+{
     type Item = Result<Row, sqlx::Error>;
 
     #[inline]
