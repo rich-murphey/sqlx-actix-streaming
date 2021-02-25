@@ -10,10 +10,12 @@ macro_rules! json_response [
             .content_type("application/json")
             .streaming(
                 $crate::ByteStream::new(
-                    ($pool, $params),
-                    move |(pool, $params)| {
-                        { $query }.fetch(pool)
-                    },
+                    $crate::RowStream::build(
+                        ($pool, $params),
+                        move |(pool, $params)| {
+                            { $query }.fetch(pool)
+                        }
+                    ),
                     |buf: &mut BytesWriter, rec| {
                         serde_json::to_writer(buf, rec)
                             .map_err(actix_web::error::ErrorInternalServerError)
@@ -30,10 +32,12 @@ macro_rules! byte_stream [
       $query:expr
     ) => ({
         $crate::ByteStream::new(
-            ($pool, $params),
-            move |(pool, $params)| {
-                { $query }.fetch(pool)
-            },
+            $crate::RowStream::build(
+                ($pool, $params),
+                move |(pool, $params)| {
+                    { $query }.fetch(pool)
+                }
+            ),
             |buf: &mut BytesWriter, rec| {
                 serde_json::to_writer(buf, rec)
                     .map_err(actix_web::error::ErrorInternalServerError)
@@ -56,15 +60,17 @@ macro_rules! json_response_alt [
             .content_type("application/json")
             .streaming(
                 $crate::ByteStream::new(
-                    ($pool,),
-                    move |(pool,)| {
-                        sqlx::query_as!(
-                            $item_struct,
-                            $sql,
-                            $( $arg, )*
-                        )
-                            .fetch(pool)
-                    },
+                    $crate::RowStream::build(
+                        ($pool,),
+                        move |(pool,)| {
+                            sqlx::query_as!(
+                                $item_struct,
+                                $sql,
+                                $( $arg, )*
+                            )
+                                .fetch(pool)
+                        }
+                    ),
                     |buf: &mut BytesWriter, rec: & $item_struct| {
                         serde_json::to_writer(buf, rec)
                             .map_err(actix_web::error::ErrorInternalServerError)
@@ -82,15 +88,17 @@ macro_rules! json_response_alt [
             .content_type("application/json")
             .streaming(
                 $crate::ByteStream::new(
-                    ($pool, $params),
-                    move |(pool, $params)| {
-                        sqlx::query_as!(
-                            $item_struct,
-                            $sql,
-                            $( $arg, )*
-                        )
-                            .fetch(pool)
-                    },
+                    $crate::RowStream::build(
+                        ($pool, $params),
+                        move |(pool, $params)| {
+                            sqlx::query_as!(
+                                $item_struct,
+                                $sql,
+                                $( $arg, )*
+                            )
+                                .fetch(pool)
+                        }
+                    ),
                     |buf: &mut BytesWriter, rec: & $item_struct| {
                         serde_json::to_writer(buf, rec)
                             .map_err(actix_web::error::ErrorInternalServerError)
@@ -107,12 +115,14 @@ macro_rules! json_response_alt [
             .content_type("application/json")
             .streaming(
                 $crate::ByteStream::new(
-                    ($pool, $sql),
-                    move |(pool, sql)| {
-                        sqlx::query_as::<_, $item_struct>(sql)
-                            $( .bind($arg) )*
-                            .fetch(pool)
-                    },
+                    $crate::RowStream::build(
+                        ($pool, $sql),
+                        move |(pool, sql)| {
+                            sqlx::query_as::<_, $item_struct>(sql)
+                                $( .bind($arg) )*
+                                .fetch(pool)
+                        }
+                    ),
                     |buf: &mut BytesWriter, rec: & $item_struct| {
                         serde_json::to_writer(buf, rec)
                             .map_err(actix_web::error::ErrorInternalServerError)
@@ -130,15 +140,17 @@ macro_rules! json_stream [
       $( $arg:literal ),*
     ) => ({
         $crate::ByteStream::new(
-            ($pool,),
-            move |(pool,)| {
-                sqlx::query_as!(
-                    $item_struct,
-                    $sql,
-                    $( $arg, )*
-                )
-                    .fetch(pool)
-            },
+            $crate::RowStream::build(
+                ($pool,),
+                move |(pool,)| {
+                    sqlx::query_as!(
+                        $item_struct,
+                        $sql,
+                        $( $arg, )*
+                    )
+                        .fetch(pool)
+                }
+            ),
             |buf: &mut BytesWriter, row| {
                 serde_json::to_writer(buf, row)
                     .map_err(actix_web::error::ErrorInternalServerError)
@@ -151,12 +163,14 @@ macro_rules! json_stream [
       $( $arg:expr ),*
     ) => ({
         $crate::ByteStream::new(
-            ($pool, $sql),
-            move |(pool, sql)| {
-                sqlx::query_as::<_, $item_struct>(sql)
-                    $( .bind($arg) )*
-                    .fetch(pool)
-            },
+            $crate::RowStream::build(
+                ($pool, $sql),
+                move |(pool, sql)| {
+                    sqlx::query_as::<_, $item_struct>(sql)
+                        $( .bind($arg) )*
+                        .fetch(pool)
+                }
+            ),
             |buf: &mut BytesWriter, row| {
                 serde_json::to_writer(buf, row)
                     .map_err(actix_web::error::ErrorInternalServerError)

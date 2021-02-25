@@ -31,6 +31,7 @@ impl<Bindings, Row> RowStream<Bindings, Row> {
 }
 impl<Bindings, Row> Stream for RowStream<Bindings, Row> {
     type Item = Result<Row, sqlx::Error>;
+
     #[inline]
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         self.with_inner_mut(|s| s.as_mut().poll_next(cx))

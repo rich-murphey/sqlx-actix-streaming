@@ -49,6 +49,7 @@ pub async fn widgets2(
         .streaming(
             // this is a stream of text (Bytes) containing a JSON array of sqlx records
             ByteStream::new(
+                RowStream::build(
                 (pool.as_ref().clone(), params),
                 move |(pool, params)| {
                     // this is a a stream of WidgetRecords that borrows pool and params
@@ -59,7 +60,7 @@ pub async fn widgets2(
                         params.offset
                     )
                     .fetch(pool)
-                },
+                }),
                 |buf: &mut BytesWriter, record: &WidgetRecord| {
                     // this writes a WidgetRecords as JSON text to the output buffer
                     serde_json::to_writer(buf, record).map_err(ErrorInternalServerError)
@@ -85,13 +86,15 @@ pub async fn widgetsref(
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(ByteStream::new(
-            (pool.as_ref().clone(), "SELECT * FROM widgets LIMIT $1 OFFSET $2 "),
-            move |(pool, sql)| {
-                sqlx::query(sql)
-                    .bind(params.limit)
-                    .bind(params.offset)
-                    .fetch(pool)
-            },
+            RowStream::build(
+                (pool.as_ref().clone(), "SELECT * FROM widgets LIMIT $1 OFFSET $2 "),
+                move |(pool, sql)| {
+                    sqlx::query(sql)
+                        .bind(params.limit)
+                        .bind(params.offset)
+                        .fetch(pool)
+                }
+            ),
             |buf: &mut BytesWriter, row: &PgRow| {
                 serde_json::to_writer(
                     buf,
@@ -111,16 +114,18 @@ pub async fn widget_table(
         .content_type("application/json")
         .streaming(
             ByteStream::new(
-                (pool.as_ref().clone(), params),
-                move |(pool, params)| {
-                    sqlx::query_as!(
-                        WidgetRecord,
-                        "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-                        params.limit,
-                        params.offset
-                    )
-                    .fetch(pool)
-                },
+                RowStream::build(
+                    (pool.as_ref().clone(), params),
+                    move |(pool, params)| {
+                        sqlx::query_as!(
+                            WidgetRecord,
+                            "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
+                            params.limit,
+                            params.offset
+                        )
+                            .fetch(pool)
+                    }
+                ),
                 |buf: &mut BytesWriter, rec: &WidgetRecord| {
                     write!(
                         &mut *buf,

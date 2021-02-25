@@ -1,13 +1,11 @@
 // -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-]
-use crate::RowStream;
 use actix_web::{
     error::ErrorInternalServerError,
     web::{Bytes, BytesMut},
 };
 use futures::{
-    stream::BoxStream,
     task::{Context, Poll},
-    Stream, StreamExt,
+    Stream, TryStream, TryStreamExt,
 };
 #[cfg(feature = "logging")]
 use log::*;
@@ -57,14 +55,15 @@ pub enum State {
 
 const BYTESTREAM_DEFAULT_ITEM_SIZE: usize = 2048;
 
-pub struct ByteStream<InnerItem, Serializer, Bindings>
+pub struct ByteStream<InnerStream, Serializer>
 where
-    Bindings: 'static,
-    InnerItem: 'static,
-    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
+    InnerStream: TryStream + Unpin,
+    <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
+    Serializer:
+        FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error> + Unpin,
 {
-    inner_stream: Pin<Box<RowStream<Bindings, InnerItem>>>,
-    serializer: Box<Serializer>,
+    inner_stream: InnerStream,
+    serializer: Serializer,
     state: State,
     item_size: usize,
     prefix: Vec<u8>,
@@ -75,24 +74,19 @@ where
     item_count: usize,
 }
 
-impl<InnerItem, Serializer, Bindings> ByteStream<InnerItem, Serializer, Bindings>
+impl<InnerStream, Serializer> ByteStream<InnerStream, Serializer>
 where
-    Bindings: 'static,
-    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
+    InnerStream: TryStream + Unpin,
+    <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
+    Serializer:
+        FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error> + Unpin,
 {
     #[inline]
-    pub fn new(
-        bindings: Bindings,
-        builder: impl for<'this> FnOnce(
-            &'this <Box<Bindings> as ::core::ops::Deref>::Target,
-        ) -> BoxStream<'this, Result<InnerItem, sqlx::Error>>,
-        serializer: Serializer,
-    ) -> Self {
+    pub fn new(inner_stream: InnerStream, serializer: Serializer) -> Self {
         Self {
-            inner_stream: Box::pin(RowStream::build(bindings, builder)),
-            serializer: Box::new(serializer),
+            inner_stream,
+            serializer,
             state: State::Unused,
-
             item_size: BYTESTREAM_DEFAULT_ITEM_SIZE,
             prefix: vec![b'['],
             delimiter: vec![b','],
@@ -147,7 +141,10 @@ where
     }
     // use the given closure to write a record to the buffer.
     #[inline]
-    fn write_record(&mut self, record: &InnerItem) -> Result<(), actix_web::Error> {
+    fn write_record(
+        &mut self,
+        record: &<InnerStream as TryStream>::Ok,
+    ) -> Result<(), actix_web::Error> {
         (self.serializer)(&mut self.buf, record)
     }
     #[inline]
@@ -158,7 +155,7 @@ where
         use Poll::*;
         use State::*;
         loop {
-            match self.inner_stream.poll_next_unpin(cx) {
+            match self.inner_stream.try_poll_next_unpin(cx) {
                 Ready(Some(Ok(record))) => {
                     #[cfg(feature = "logging")]
                     {
@@ -206,10 +203,12 @@ where
     }
 }
 
-impl<InnerItem, Serializer, Bindings> Stream for ByteStream<InnerItem, Serializer, Bindings>
+impl<InnerStream, Serializer> Stream for ByteStream<InnerStream, Serializer>
 where
-    Bindings: 'static,
-    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
+    InnerStream: TryStream + Unpin,
+    <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
+    Serializer:
+        FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error> + Unpin,
 {
     type Item = Result<Bytes, actix_web::Error>;
 
@@ -231,10 +230,12 @@ where
 }
 
 #[cfg(feature = "logging")]
-impl<InnerItem, Serializer, Bindings> Drop for ByteStream<InnerItem, Serializer, Bindings>
+impl<InnerStream, Serializer> Drop for ByteStream<InnerStream, Serializer>
 where
-    Bindings: 'static,
-    Serializer: FnMut(&mut BytesWriter, &InnerItem) -> Result<(), actix_web::Error>,
+    InnerStream: TryStream + Unpin,
+    <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
+    Serializer:
+        FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error> + Unpin,
 {
     #[inline]
     fn drop(&mut self) {
