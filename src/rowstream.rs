@@ -1,14 +1,14 @@
 // -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-
 use actix_web::*;
+use core::ops::Deref;
 use futures::{
     prelude::*,
     stream::BoxStream,
     task::{Context, Poll},
 };
+use stable_deref_trait::StableDeref;
 pub use std::io::Write;
 use std::pin::Pin;
-use core::ops::Deref;
-use stable_deref_trait::StableDeref;
 
 #[ouroboros::self_referencing]
 pub struct RowStream<Bindings, Row>
