@@ -131,17 +131,17 @@ where
     }
     // return the buffered output bytes.
     #[inline]
-    fn get_bytes(&mut self) -> Bytes {
+    fn bytes(&mut self) -> Bytes {
         self.buf.0.split().freeze()
     }
     // ensure capacity to write one additional item into the buffer.
     #[inline]
-    fn reserve_one_item(&mut self) {
+    fn set_buf_size(&mut self) {
         self.buf.0.reserve(self.item_size);
     }
     // use the given closure to write a record to the buffer.
     #[inline]
-    fn write_record(
+    fn write_item(
         &mut self,
         record: &<InnerStream as TryStream>::Ok,
     ) -> Result<(), actix_web::Error> {
@@ -167,9 +167,9 @@ where
                         _ => (),
                     };
                     let initial_len = self.buf.0.len();
-                    if let Err(e) = self.write_record(&record) {
+                    if let Err(e) = self.write_item(&record) {
                         #[cfg(feature = "logging")]
-                        error!("write_record: {:?}", e);
+                        error!("write_item: {:?}", e);
                         break Ready(Some(Err(ErrorInternalServerError(e))));
                     }
                     let item_size = self.buf.0.len() - initial_len;
@@ -180,7 +180,7 @@ where
                     if item_size <= remaining_space {
                         continue;
                     }
-                    break Ready(Some(Ok(self.get_bytes())));
+                    break Ready(Some(Ok(self.bytes())));
                 }
                 Ready(Some(Err(e))) => {
                     #[cfg(feature = "logging")]
@@ -190,13 +190,13 @@ where
                 Ready(None) => {
                     self.state = Done;
                     self.put_suffix();
-                    break Ready(Some(Ok(self.get_bytes())));
+                    break Ready(Some(Ok(self.bytes())));
                 }
                 Pending => {
                     if self.buf.0.is_empty() {
                         break Pending;
                     }
-                    break Ready(Some(Ok(self.get_bytes())));
+                    break Ready(Some(Ok(self.bytes())));
                 }
             }
         }
@@ -219,7 +219,7 @@ where
         match self.state {
             Unused => {
                 self.state = Empty;
-                self.reserve_one_item();
+                self.set_buf_size();
                 self.put_prefix();
                 self.next(cx)
             }
