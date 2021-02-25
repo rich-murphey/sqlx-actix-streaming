@@ -37,7 +37,7 @@ impl Write for BytesWriter {
     }
 }
 
-#[derive(Debug)]
+#[cfg_attr(feature = "logging", derive(Debug))]
 pub enum State {
     /// Unused is the initial state of a new instance. Unused -> Empty: upon
     /// self.poll_next().
