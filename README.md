@@ -59,11 +59,10 @@ pub async fn widgets(
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(
-            // this is a stream of text Bytes of a JSON array of sqlx records
-            ByteStreamWithParams::new(
-                pool.as_ref().clone(),
-                params,
-                move |pool, params| {
+            // this is a stream of text (Bytes) containing a JSON array of sqlx records
+            ByteStream::new(
+                (pool.as_ref().clone(), params),
+                move |(pool, params)| {
                     // this is a a stream of WidgetRecords that borrows pool and params
                     sqlx::query_as!(
                         WidgetRecord,

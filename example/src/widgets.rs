@@ -47,7 +47,7 @@ pub async fn widgets2(
     HttpResponse::Ok()
         .content_type("application/json")
         .streaming(
-            // this is a stream of text Bytes of a JSON array of sqlx records
+            // this is a stream of text (Bytes) containing a JSON array of sqlx records
             ByteStream::new(
                 (pool.as_ref().clone(), params),
                 move |(pool, params)| {
