@@ -58,6 +58,7 @@ const BYTESTREAM_DEFAULT_ITEM_SIZE: usize = 2048;
 pub struct ByteStream<InnerStream, Serializer>
 where
     InnerStream: TryStream + Unpin,
+    // required for conversion to ErrorInternalServerError(e):
     <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
     Serializer: FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error>
         + Unpin,
