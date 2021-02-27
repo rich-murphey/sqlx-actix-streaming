@@ -51,7 +51,7 @@ pub async fn widgets2(
             ByteStream::new(
                 // a stream of WidgetRecords that owns pool and params
                 RowStream::build(
-                    Box::new((pool.as_ref().clone(), params)),
+                    (pool.as_ref().clone(), params),
                     // a stream of WidgetRecords that borrows pool and params
                     move |(pool, params)| {
                         sqlx::query_as!(
@@ -89,10 +89,10 @@ pub async fn widgetsref(
         .content_type("application/json")
         .streaming(ByteStream::new(
             RowStream::build(
-                Box::new((
+                (
                     pool.as_ref().clone(),
                     "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-                )),
+                ),
                 move |(pool, sql)| {
                     sqlx::query(sql)
                         .bind(params.limit)
@@ -120,7 +120,7 @@ pub async fn widget_table(
         .streaming(
             ByteStream::new(
                 RowStream::build(
-                    Box::new((pool.as_ref().clone(), params)),
+                    (pool.as_ref().clone(), params),
                     move |(pool, params)| {
                         sqlx::query_as!(
                             WidgetRecord,
@@ -162,7 +162,7 @@ pub async fn combinators(
             }))
             .chain(
                 RowStream::build(
-                    Box::new((pool.as_ref().clone(), params)),
+                    (pool.as_ref().clone(), params),
                     move |(pool, params)| {
                         sqlx::query_as!(
                             WidgetRecord,

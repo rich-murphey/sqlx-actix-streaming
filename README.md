@@ -63,7 +63,7 @@ pub async fn widgets(
             ByteStream::new(
                 // a stream of WidgetRecords that owns pool and params
                 RowStream::build(
-                    Box::new((pool.as_ref().clone(), params)),
+                    (pool.as_ref().clone(), params),
                     // a stream of WidgetRecords that borrows pool and params
                     move |(pool, params)| {
                         sqlx::query_as!(

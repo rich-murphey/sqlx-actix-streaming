@@ -11,7 +11,7 @@ macro_rules! json_response [
             .streaming(
                 $crate::ByteStream::new(
                     $crate::RowStream::build(
-                        Box::new(($pool, $params)),
+                        ($pool, $params),
                         move |(pool, $params)| {
                             { $query }.fetch(pool)
                         }
@@ -33,7 +33,7 @@ macro_rules! byte_stream [
     ) => ({
         $crate::ByteStream::new(
             $crate::RowStream::build(
-                Box::new(($pool, $params)),
+                ($pool, $params),
                 move |(pool, $params)| {
                     { $query }.fetch(pool)
                 }
@@ -61,7 +61,7 @@ macro_rules! json_response_alt [
             .streaming(
                 $crate::ByteStream::new(
                     $crate::RowStream::build(
-                        Box::new($pool),
+                        $pool,
                         move |pool| {
                             sqlx::query_as!(
                                 $item_struct,
@@ -89,7 +89,7 @@ macro_rules! json_response_alt [
             .streaming(
                 $crate::ByteStream::new(
                     $crate::RowStream::build(
-                        Box::new(($pool, $params)),
+                        ($pool, $params),
                         move |(pool, $params)| {
                             sqlx::query_as!(
                                 $item_struct,

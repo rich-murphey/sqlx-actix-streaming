@@ -1,41 +1,39 @@
 // -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-
-use core::ops::Deref;
 use futures::{
     prelude::*,
     stream::BoxStream,
     task::{Context, Poll},
 };
-use stable_deref_trait::StableDeref;
 pub use std::io::Write;
 use std::pin::Pin;
 
 #[ouroboros::self_referencing]
 pub struct RowStream<Bindings, Row>
 where
-    Bindings: Unpin + StableDeref + 'static,
+    Bindings: 'static,
 {
-    bindings: Bindings,
+    bindings: Box<Bindings>,
     #[borrows(bindings)]
-    #[covariant] // StableDeref is covariant.
+    #[covariant] // Box is covariant.
     inner: BoxStream<'this, Result<Row, sqlx::Error>>,
 }
 impl<Bindings, Row> RowStream<Bindings, Row>
 where
-    Bindings: Unpin + StableDeref + 'static,
+    Bindings: 'static,
 {
     #[inline]
     pub fn build(
         bindings: Bindings,
         inner_builder: impl for<'this> FnOnce(
-            &'this <Bindings as Deref>::Target,
+            &'this <Box<Bindings> as ::core::ops::Deref>::Target,
         ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
     ) -> Self {
-        Self::new(bindings, inner_builder)
+        Self::new(Box::new(bindings), inner_builder)
     }
 }
 impl<Bindings, Row> Stream for RowStream<Bindings, Row>
 where
-    Bindings: Unpin + StableDeref + 'static,
+    Bindings: 'static,
 {
     type Item = Result<Row, sqlx::Error>;
 
