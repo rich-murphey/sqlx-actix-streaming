@@ -38,15 +38,16 @@ impl Write for BytesWriter {
 
 #[cfg_attr(feature = "logging", derive(Debug))]
 pub enum State {
-    /// Unused is the initial state of a new instance. Unused -> Empty: upon
-    /// self.poll_next().
+    /// Unused is the initial state of a new instance. Change to Empty
+    /// upon self.poll_next().
     Unused,
     /// Empty means self.poll_next() has been called at least once.
-    /// Empty -> NonEmpty: upon inner_stream.poll_next() returning Ready(Ok(item).
+    /// Change to NonEmpty when inner_stream.poll_next() returns
+    /// Ready(Ok(item).
     Empty,
-    /// NonEmpty means inner_stream.poll_next() has returned a Ready(Ok(item)
-    /// at least once. NonEmpty -> Done: upon inner_stream.poll_next()
-    /// returninng Ready(None).
+    /// NonEmpty means inner_stream.poll_next() has returned a
+    /// Ready(Ok(item) at least once. Change to Done when
+    /// inner_stream.poll_next() returns Ready(None).
     NonEmpty,
     /// Done means inner_stream.poll_next() has returned Ready(None).
     Done,
@@ -83,15 +84,18 @@ where
 {
     #[inline]
     pub fn new(inner_stream: InnerStream, serializer: Serializer) -> Self {
+        Self::with_size(inner_stream, serializer, BYTESTREAM_DEFAULT_ITEM_SIZE)
+    }
+    pub fn with_size(inner_stream: InnerStream, serializer: Serializer, size: usize) -> Self {
         Self {
             inner_stream,
             serializer,
             state: State::Unused,
-            item_size: BYTESTREAM_DEFAULT_ITEM_SIZE,
+            item_size: size,
             prefix: vec![b'['],
             delimiter: vec![b','],
             suffix: vec![b']'],
-            buf: BytesWriter(BytesMut::with_capacity(BYTESTREAM_DEFAULT_ITEM_SIZE)),
+            buf: BytesWriter(BytesMut::with_capacity(size)),
             #[cfg(feature = "logging")]
             item_count: 0,
         }
@@ -134,11 +138,6 @@ where
     fn bytes(&mut self) -> Bytes {
         self.buf.0.split().freeze()
     }
-    // ensure capacity to write one item into the buffer.
-    #[inline]
-    fn set_buf_size(&mut self) {
-        self.buf.0.reserve(self.item_size);
-    }
     // use the serializer to write one item to the buffer.
     #[inline]
     fn write_item(
@@ -147,13 +146,29 @@ where
     ) -> Result<(), actix_web::Error> {
         (self.serializer)(&mut self.buf, record)
     }
+}
+
+impl<InnerStream, Serializer> Stream for ByteStream<InnerStream, Serializer>
+where
+    InnerStream: TryStream + Unpin,
+    <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
+    Serializer: FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error>
+        + Unpin,
+{
+    type Item = Result<Bytes, actix_web::Error>;
+
     #[inline]
-    fn next(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Bytes, actix_web::Error>>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         use Poll::*;
         use State::*;
+        match self.state {
+            Unused => {
+                self.state = Empty;
+                self.put_prefix();
+            }
+            Done => return Ready(None),
+            _ => (),
+        }
         loop {
             match self.inner_stream.try_poll_next_unpin(cx) {
                 Ready(Some(Ok(record))) => {
@@ -199,32 +214,6 @@ where
                     break Ready(Some(Ok(self.bytes())));
                 }
             }
-        }
-    }
-}
-
-impl<InnerStream, Serializer> Stream for ByteStream<InnerStream, Serializer>
-where
-    InnerStream: TryStream + Unpin,
-    <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
-    Serializer: FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error>
-        + Unpin,
-{
-    type Item = Result<Bytes, actix_web::Error>;
-
-    #[inline]
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        use Poll::*;
-        use State::*;
-        match self.state {
-            Unused => {
-                self.state = Empty;
-                self.set_buf_size();
-                self.put_prefix();
-                self.next(cx)
-            }
-            Empty | NonEmpty => self.next(cx),
-            Done => Ready(None),
         }
     }
 }
