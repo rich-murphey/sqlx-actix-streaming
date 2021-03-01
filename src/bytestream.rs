@@ -1,5 +1,5 @@
 // -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-]
-use actix_web::error::*;
+use actix_web::error::{Error, ErrorInternalServerError};
 use bytes::{Bytes, BytesMut};
 use futures::{
     task::{Context, Poll},

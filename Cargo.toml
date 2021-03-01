@@ -25,6 +25,7 @@ sqlite = [ "sqlx/sqlite" ]
 mssql = [ "sqlx/mssql" ]
 
 [dependencies]
+# actix-web = { git = "https://github.com/actix/actix-web.git", features = ["cookies"] }
 actix-web = "4.0.0-beta.3"
 bytes = "1"
 futures = "0"
