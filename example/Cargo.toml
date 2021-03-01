@@ -29,8 +29,8 @@ log = "0"
 num_cpus = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }
-# sqlx = { version = "0.5", features = [ "postgres", "macros" ] }
-sqlx = { path = "../../sqlx", features = [ "postgres", "json", "serialize" ] }
+sqlx = { version = "0.5", features = [ "postgres", "macros" ] }
+# sqlx = { path = "../../sqlx", features = [ "postgres", "json", "serialize" ] }
 sqlx-actix-streaming = { path = "../../sqlx-actix-streaming", features = ["macros"] }
 sys-info = "0"
 thiserror = "1"

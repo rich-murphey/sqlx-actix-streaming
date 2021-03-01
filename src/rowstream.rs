@@ -8,16 +8,16 @@ pub use std::io::Write;
 use std::pin::Pin;
 
 #[ouroboros::self_referencing]
-pub struct RowStream<Bindings, Row>
+pub struct SelfRefStream<Bindings, Item>
 where
     Bindings: 'static,
 {
     bindings: Box<Bindings>,
     #[borrows(bindings)]
     #[covariant] // Box is covariant.
-    inner: BoxStream<'this, Result<Row, sqlx::Error>>,
+    inner: BoxStream<'this, Result<Item, sqlx::Error>>,
 }
-impl<Bindings, Row> RowStream<Bindings, Row>
+impl<Bindings, Item> SelfRefStream<Bindings, Item>
 where
     Bindings: 'static,
 {
@@ -26,16 +26,16 @@ where
         bindings: Bindings,
         inner_builder: impl for<'this> FnOnce(
             &'this <Box<Bindings> as ::core::ops::Deref>::Target,
-        ) -> BoxStream<'this, Result<Row, sqlx::Error>>,
+        ) -> BoxStream<'this, Result<Item, sqlx::Error>>,
     ) -> Self {
         Self::new(Box::new(bindings), inner_builder)
     }
 }
-impl<Bindings, Row> Stream for RowStream<Bindings, Row>
+impl<Bindings, Item> Stream for SelfRefStream<Bindings, Item>
 where
     Bindings: 'static,
 {
-    type Item = Result<Row, sqlx::Error>;
+    type Item = Result<Item, sqlx::Error>;
 
     #[inline]
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {

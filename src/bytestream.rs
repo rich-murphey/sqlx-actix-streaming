@@ -1,5 +1,4 @@
 // -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-]
-use actix_web::error::{Error, ErrorInternalServerError};
 use bytes::{Bytes, BytesMut};
 use futures::{
     task::{Context, Poll},
@@ -157,6 +156,7 @@ where
 
     #[inline]
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        use actix_web::error::ErrorInternalServerError;
         use Poll::*;
         use State::*;
         match self.state {

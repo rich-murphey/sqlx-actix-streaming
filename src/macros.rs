@@ -10,7 +10,7 @@ macro_rules! json_response [
             .content_type("application/json")
             .streaming(
                 $crate::ByteStream::new(
-                    $crate::RowStream::build(
+                    $crate::SelfRefStream::build(
                         ($pool, $params),
                         move |(pool, $params)| {
                             { $query }.fetch(pool)
@@ -35,7 +35,7 @@ macro_rules! query_json [
             .content_type("application/json")
             .streaming(
                 $crate::ByteStream::new(
-                    $crate::RowStream::build(
+                    $crate::SelfRefStream::build(
                         ($pool, $( $arg, )* ),
                         move |(pool, $( $arg, )* )| {
                             sqlx::query!($query, $( * $arg, )* )
@@ -58,7 +58,7 @@ macro_rules! byte_stream [
       $query:expr
     ) => ({
         $crate::ByteStream::new(
-            $crate::RowStream::build(
+            $crate::SelfRefStream::build(
                 ($pool, $params),
                 move |(pool, $params)| {
                     { $query }.fetch(pool)
@@ -86,7 +86,7 @@ macro_rules! json_response_alt [
             .content_type("application/json")
             .streaming(
                 $crate::ByteStream::new(
-                    $crate::RowStream::build(
+                    $crate::SelfRefStream::build(
                         $pool,
                         move |pool| {
                             sqlx::query_as!(
@@ -114,7 +114,7 @@ macro_rules! json_response_alt [
             .content_type("application/json")
             .streaming(
                 $crate::ByteStream::new(
-                    $crate::RowStream::build(
+                    $crate::SelfRefStream::build(
                         ($pool, $params),
                         move |(pool, $params)| {
                             sqlx::query_as!(
@@ -141,7 +141,7 @@ macro_rules! json_response_alt [
             .content_type("application/json")
             .streaming(
                 $crate::ByteStream::new(
-                    $crate::RowStream::build(
+                    $crate::SelfRefStream::build(
                         ($pool, $sql),
                         move |(pool, sql)| {
                             sqlx::query_as::<_, $item_struct>(sql)
@@ -166,7 +166,7 @@ macro_rules! json_stream [
       $( $arg:literal ),*
     ) => ({
         $crate::ByteStream::new(
-            $crate::RowStream::build(
+            $crate::SelfRefStream::build(
                 ($pool,),
                 move |(pool,)| {
                     sqlx::query_as!(
@@ -189,7 +189,7 @@ macro_rules! json_stream [
       $( $arg:expr ),*
     ) => ({
         $crate::ByteStream::new(
-            $crate::RowStream::build(
+            $crate::SelfRefStream::build(
                 ($pool, $sql),
                 move |(pool, sql)| {
                     sqlx::query_as::<_, $item_struct>(sql)
@@ -211,7 +211,7 @@ macro_rules! query_stream [
       $sql:literal,
       $( $arg:expr ),*
     ) => ({
-        $crate::RowStream::make(
+        $crate::SelfRefStream::make(
             $pool,
             move |pool| {
                 sqlx::query(sql)
@@ -225,7 +225,7 @@ macro_rules! query_stream [
       $sql:expr,
       $( $arg:expr ),*
     ) => ({
-        $crate::RowStream::make(
+        $crate::SelfRefStream::make(
             ($pool, $sql),
             move |(pool, sql)| {
                 sqlx::query(sql)
@@ -243,7 +243,7 @@ macro_rules! query_as_stream [
       $sql:literal,
       $( $arg:literal ),*
     ) => ({
-        $crate::RowStream::make(
+        $crate::SelfRefStream::make(
             ($pool, $sql.to_string()),
             |(pool, _sql)| {
                 sqlx::query_as!(
@@ -260,7 +260,7 @@ macro_rules! query_as_stream [
       $sql:expr,
       $( $arg:expr ),*
     ) => ({
-        $crate::RowStream::make(
+        $crate::SelfRefStream::make(
             ($pool, $sql),
             move |(pool, sql)| {
                 sqlx::query_as::<_, $item_struct>(sql)
@@ -280,7 +280,7 @@ macro_rules! query_as_byte_stream [
       $( $arg:literal ),*
     ) => ({
         $crate::byte_stream(
-            $crate::RowStream::make(
+            $crate::SelfRefStream::make(
                 $pool,
                 move |pool| {
                     sqlx::query_as!(
@@ -301,7 +301,7 @@ macro_rules! query_as_byte_stream [
       $( $arg:expr ),*
     ) => ({
         $crate::sql_byte_stream(
-            $crate::RowStream::make(
+            $crate::SelfRefStream::make(
                 ($pool, $sql),
                 move |(pool, sql)| {
                     sqlx::query_as::<_, $item_struct>(sql)
@@ -322,7 +322,7 @@ macro_rules! query_byte_stream [
       $( $arg:literal ),*
     ) => ({
         $crate::byte_stream(
-            $crate::RowStream::make(
+            $crate::SelfRefStream::make(
                 $pool,
                 move |pool| {
                     sqlx::query!(
@@ -341,7 +341,7 @@ macro_rules! query_byte_stream [
       $( $arg:expr ),*
     ) => ({
         $crate::sql_byte_stream(
-            $crate::RowStream::make(
+            $crate::SelfRefStream::make(
                 ($pool, $sql),
                 move |(pool, sql)| {
                     sqlx::query::<_>(sql)
