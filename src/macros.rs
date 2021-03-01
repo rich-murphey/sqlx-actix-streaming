@@ -26,6 +26,32 @@ macro_rules! json_response [
 ];
 
 #[macro_export]
+macro_rules! query_json [
+    ( $query:literal,
+      $pool:expr,
+      $( $arg:ident ),*
+    ) => ({
+        HttpResponse::Ok()
+            .content_type("application/json")
+            .streaming(
+                $crate::ByteStream::new(
+                    $crate::RowStream::build(
+                        ($pool, $( $arg, )* ),
+                        move |(pool, $( $arg, )* )| {
+                            sqlx::query!($query, $( * $arg, )* )
+                                .fetch(pool)
+                        }
+                    ),
+                    |buf: &mut BytesWriter, rec| {
+                        serde_json::to_writer(buf, rec)
+                            .map_err(actix_web::error::ErrorInternalServerError)
+                    },
+                )
+            )
+    });
+];
+
+#[macro_export]
 macro_rules! byte_stream [
     ( $pool:expr,
       $params:ident,

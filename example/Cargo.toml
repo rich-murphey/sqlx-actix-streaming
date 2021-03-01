@@ -20,7 +20,7 @@ sqlite = [ "sqlx/sqlite" ]
 mssql = [ "sqlx/mssql" ]
 
 [dependencies]
-actix-web = "3"
+actix-web = "4.0.0-beta.3"
 anyhow = "1"
 dotenv = "0"
 env_logger = "0"
@@ -29,8 +29,8 @@ log = "0"
 num_cpus = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }
-sqlx = { version = "0.4", features = [ "postgres" ] }
+sqlx = { version = "0.5", features = [ "postgres", "macros" ] }
+# sqlx = { path = "../../sqlx", features = [ "postgres", "json" ] }
 sqlx-actix-streaming = { path = "..", features = ["macros"] }
 sys-info = "0"
 thiserror = "1"
-funty = "=1.1.0"

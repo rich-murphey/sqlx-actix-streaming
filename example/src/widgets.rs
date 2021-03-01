@@ -1,5 +1,5 @@
 use actix_web::{
-    error::ErrorInternalServerError,
+    error::*,
     web::{BufMut, BytesMut},
     *,
 };
@@ -21,6 +21,32 @@ pub struct WidgetParams {
     pub offset: i64,
     pub limit: i64,
 }
+
+#[post("/test")]
+pub async fn test(pool: web::Data<PgPool>) -> HttpResponse {
+    HttpResponse::Ok().content_type("application/json").json(
+        sqlx::query!("SELECT * FROM widgets",)
+            .fetch_all(pool.as_ref())
+            .await
+            .unwrap(),
+    )
+}
+
+// #[post("/testb")]
+// pub async fn testb(
+//     web::Json(params): web::Json<WidgetParams>,
+//     pool: web::Data<PgPool>,
+// ) -> HttpResponse {
+//     json_response!(
+//         pool.as_ref().clone(),
+//         params,
+//         sqlx::query!(
+//             "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
+//             params.limit,
+//             params.offset
+//         )
+//     )
+// }
 
 #[post("/widgets")]
 pub async fn widgets(
@@ -119,18 +145,15 @@ pub async fn widget_table(
         .content_type("application/json")
         .streaming(
             ByteStream::new(
-                RowStream::build(
-                    (pool.as_ref().clone(), params),
-                    move |(pool, params)| {
-                        sqlx::query_as!(
-                            WidgetRecord,
-                            "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-                            params.limit,
-                            params.offset
-                        )
-                        .fetch(pool)
-                    },
-                ),
+                RowStream::build((pool.as_ref().clone(), params), move |(pool, params)| {
+                    sqlx::query_as!(
+                        WidgetRecord,
+                        "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
+                        params.limit,
+                        params.offset
+                    )
+                    .fetch(pool)
+                }),
                 |buf: &mut BytesWriter, rec: &WidgetRecord| {
                     write!(
                         &mut *buf,
@@ -161,18 +184,15 @@ pub async fn combinators(
                 Ok(b.freeze())
             }))
             .chain(
-                RowStream::build(
-                    (pool.as_ref().clone(), params),
-                    move |(pool, params)| {
-                        sqlx::query_as!(
-                            WidgetRecord,
-                            "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-                            params.limit,
-                            params.offset
-                        )
-                        .fetch(pool)
-                    },
-                )
+                RowStream::build((pool.as_ref().clone(), params), move |(pool, params)| {
+                    sqlx::query_as!(
+                        WidgetRecord,
+                        "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
+                        params.limit,
+                        params.offset
+                    )
+                    .fetch(pool)
+                })
                 .enumerate()
                 .map(|(i, item)| {
                     item.map(|row| {
@@ -195,6 +215,7 @@ pub async fn combinators(
 }
 
 pub fn service(cfg: &mut web::ServiceConfig) {
+    cfg.service(test);
     cfg.service(widgets);
     cfg.service(widgets2);
     cfg.service(widgetsref);
