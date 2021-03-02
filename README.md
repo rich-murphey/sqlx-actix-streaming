@@ -62,7 +62,7 @@ pub async fn widgets(
             // a stream of text (Bytes) containing a JSON array of sqlx records
             ByteStream::new(
                 // a stream of WidgetRecords that owns pool and params
-                RowStream::build(
+                SelfRefStream::build(
                     (pool.as_ref().clone(), params),
                     // a stream of WidgetRecords that borrows pool and params
                     move |(pool, params)| {
