@@ -42,8 +42,8 @@ pub async fn widgets(
 Here is the same example using fewer macros:
 * [sqlx::query_as!()](https://docs.rs/sqlx/0.4.2/sqlx/macro.query_as.html) is a stream of WidgetRecords that borrows
   a database connection and parameters.
-* ByteStreamWithParams::new() wraps it with an owned database
-  connection and owned parameters, and coverts each record to json.
+* ByteStream::new() wraps it with an owned database
+  connection and owned parameters. It coverts each record to json.
 * [HttpResponse.streaming()](https://docs.rs/actix-web/3.3.2/actix_web/dev/struct.HttpResponseBuilder.html#method.streaming) streams it to the HTTP client.
 
 Note the two closures.  The first closure generates a stream of
