@@ -4,6 +4,8 @@
 mod macros;
 mod bytestream;
 mod selfrefstream;
+mod rowstream;
 
 pub use bytestream::*;
 pub use selfrefstream::*;
+pub use rowstream::*;

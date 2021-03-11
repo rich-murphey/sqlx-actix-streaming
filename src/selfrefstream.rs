@@ -13,7 +13,7 @@ where
     Bindings: 'static,
 {
     bindings: Box<Bindings>,
-    #[borrows(bindings)]
+    #[borrows(mut bindings)]
     #[covariant] // Box is covariant.
     inner: BoxStream<'this, Result<Item, sqlx::Error>>,
 }
@@ -25,7 +25,7 @@ where
     pub fn build(
         bindings: Bindings,
         inner_builder: impl for<'this> FnOnce(
-            &'this <Box<Bindings> as ::core::ops::Deref>::Target,
+            &'this mut <Box<Bindings> as ::core::ops::Deref>::Target,
         ) -> BoxStream<'this, Result<Item, sqlx::Error>>,
     ) -> Self {
         Self::new(Box::new(bindings), inner_builder)
