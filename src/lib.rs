@@ -3,9 +3,9 @@
 #[macro_use]
 mod macros;
 mod bytestream;
-mod selfrefstream;
 mod rowstream;
+mod selfrefstream;
 
 pub use bytestream::*;
-pub use selfrefstream::*;
 pub use rowstream::*;
+pub use selfrefstream::*;
