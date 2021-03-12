@@ -8,32 +8,32 @@ pub use std::io::Write;
 use std::pin::Pin;
 
 #[ouroboros::self_referencing]
-pub struct SelfRefStream<Bindings, Item>
+pub struct SelfRefStream<Args, Item>
 where
-    Bindings: 'static,
+    Args: 'static,
 {
-    bindings: Box<Bindings>,
-    #[borrows(mut bindings)]
+    args: Box<Args>,
+    #[borrows(args)]
     #[covariant] // Box is covariant.
     inner: BoxStream<'this, Result<Item, sqlx::Error>>,
 }
-impl<Bindings, Item> SelfRefStream<Bindings, Item>
+impl<Args, Item> SelfRefStream<Args, Item>
 where
-    Bindings: 'static,
+    Args: 'static,
 {
     #[inline]
     pub fn build(
-        bindings: Bindings,
+        args: Args,
         inner_builder: impl for<'this> FnOnce(
-            &'this mut <Box<Bindings> as ::core::ops::Deref>::Target,
+            &'this <Box<Args> as ::core::ops::Deref>::Target,
         ) -> BoxStream<'this, Result<Item, sqlx::Error>>,
     ) -> Self {
-        Self::new(Box::new(bindings), inner_builder)
+        Self::new(Box::new(args), inner_builder)
     }
 }
-impl<Bindings, Item> Stream for SelfRefStream<Bindings, Item>
+impl<Args, Item> Stream for SelfRefStream<Args, Item>
 where
-    Bindings: 'static,
+    Args: 'static,
 {
     type Item = Result<Item, sqlx::Error>;
 
