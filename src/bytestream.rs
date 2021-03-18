@@ -2,7 +2,7 @@
 use bytes::{Bytes, BytesMut};
 use futures::{
     task::{Context, Poll},
-    Stream, TryStream, TryStreamExt,
+    Stream, TryStream,
 };
 #[cfg(feature = "logging")]
 use log::*;
@@ -54,13 +54,13 @@ const BYTESTREAM_DEFAULT_ITEM_SIZE: usize = 2048;
 
 pub struct ByteStream<InnerStream, Serializer>
 where
-    InnerStream: TryStream + Unpin,
+    InnerStream: TryStream,
     // required for conversion to ErrorInternalServerError(e):
     <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
     Serializer: FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error>
         + Unpin,
 {
-    inner_stream: InnerStream,
+    inner_stream: Pin<Box<InnerStream>>,
     serializer: Serializer,
     state: State,
     item_size: usize,
@@ -74,7 +74,7 @@ where
 
 impl<InnerStream, Serializer> ByteStream<InnerStream, Serializer>
 where
-    InnerStream: TryStream + Unpin,
+    InnerStream: TryStream,
     <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
     Serializer: FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error>
         + Unpin,
@@ -85,7 +85,7 @@ where
     }
     pub fn with_size(inner_stream: InnerStream, serializer: Serializer, size: usize) -> Self {
         Self {
-            inner_stream,
+            inner_stream: Box::pin(inner_stream),
             serializer,
             state: State::Unused,
             item_size: size,
@@ -147,7 +147,7 @@ where
 
 impl<InnerStream, Serializer> Stream for ByteStream<InnerStream, Serializer>
 where
-    InnerStream: TryStream + Unpin,
+    InnerStream: TryStream,
     <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
     Serializer: FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error>
         + Unpin,
@@ -168,7 +168,7 @@ where
             _ => (),
         }
         loop {
-            match self.inner_stream.try_poll_next_unpin(cx) {
+            match self.inner_stream.as_mut().try_poll_next(cx) {
                 Ready(Some(Ok(record))) => {
                     #[cfg(feature = "logging")]
                     {
@@ -219,7 +219,7 @@ where
 #[cfg(feature = "logging")]
 impl<InnerStream, Serializer> Drop for ByteStream<InnerStream, Serializer>
 where
-    InnerStream: TryStream + Unpin,
+    InnerStream: TryStream,
     <InnerStream as TryStream>::Error: std::fmt::Debug + std::fmt::Display + 'static,
     Serializer: FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), actix_web::Error>
         + Unpin,

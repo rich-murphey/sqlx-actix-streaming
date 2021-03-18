@@ -22,31 +22,32 @@ pub struct WidgetParams {
     pub limit: i64,
 }
 
-// #[post("/test")]
-// pub async fn test(pool: web::Data<PgPool>) -> HttpResponse {
-//     HttpResponse::Ok().content_type("application/json").json(
-//         sqlx::query!("SELECT * FROM widgets",)
-//             .fetch_all(pool.as_ref())
-//             .await
-//             .unwrap(),
-//     )
-// }
+#[post("/test")]
+pub async fn test(pool: web::Data<PgPool>) -> HttpResponse {
+    HttpResponse::Ok().content_type("application/json").json(
+        sqlx::query_as!(WidgetRecord, "SELECT * FROM widgets",)
+            .fetch_all(pool.as_ref())
+            .await
+            .unwrap(),
+    )
+}
 
-// #[post("/testb")]
-// pub async fn testb(
-//     web::Json(params): web::Json<WidgetParams>,
-//     pool: web::Data<PgPool>,
-// ) -> HttpResponse {
-//     json_response!(
-//         pool.as_ref().clone(),
-//         params,
-//         sqlx::query!(
-//             "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
-//             params.limit,
-//             params.offset
-//         )
-//     )
-// }
+#[post("/testb")]
+pub async fn testb(
+    web::Json(params): web::Json<WidgetParams>,
+    pool: web::Data<PgPool>,
+) -> HttpResponse {
+    json_response!(
+        pool.as_ref().clone(),
+        params,
+        sqlx::query_as!(
+            WidgetRecord,
+            "SELECT * FROM widgets LIMIT $1 OFFSET $2 ",
+            params.limit,
+            params.offset
+        )
+    )
+}
 
 #[post("/widgets")]
 pub async fn widgets(
@@ -215,7 +216,8 @@ pub async fn combinators(
 }
 
 pub fn service(cfg: &mut web::ServiceConfig) {
-    // cfg.service(test);
+    cfg.service(test);
+    cfg.service(testb);
     cfg.service(widgets);
     cfg.service(widgets2);
     cfg.service(widgetsref);
