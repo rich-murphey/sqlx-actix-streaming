@@ -17,6 +17,7 @@ where
     #[covariant] // Box is covariant.
     inner: BoxStream<'this, Result<Item, sqlx::Error>>,
 }
+
 impl<Args, Item> SelfRefStream<Args, Item>
 where
     Args: 'static,
@@ -31,6 +32,7 @@ where
         Self::new(Box::new(args), inner_builder)
     }
 }
+
 impl<Args, Item> Stream for SelfRefStream<Args, Item>
 where
     Args: 'static,

@@ -20,6 +20,7 @@ where
     #[covariant] // Box is covariant.
     inner: BoxStream<'this, Result<Item, sqlx::Error>>,
 }
+
 impl<DB, Args, Item> RowStream<DB, Args, Item>
 where
     DB: Database,
@@ -38,6 +39,7 @@ where
         Ok(Self::new(Box::new(conn), Box::new(args), inner_builder))
     }
 }
+
 impl<DB, Args, Item> Stream for RowStream<DB, Args, Item>
 where
     DB: Database,
