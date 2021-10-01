@@ -31,7 +31,7 @@ actix-utils = "3.0.0"
 bytes = "1.1.0"
 futures = "0.3.17"
 log = { version = "0.4.14", optional = true }
-ouroboros = "0.11.1"
+ouroboros = "0.12.0"
 serde = "1.0.130"
 serde_json = "1.0.68"
 sqlx = "0.5.7"

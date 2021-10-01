@@ -31,8 +31,9 @@ where
     ) -> Self {
         SelfRefStreamBuilder {
             args,
-            inner_builder
-        }.build()
+            inner_builder,
+        }
+        .build()
     }
 }
 
