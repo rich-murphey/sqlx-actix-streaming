@@ -14,8 +14,8 @@ where
     DB: Database,
     Args: 'static,
 {
-    conn: Box<PoolConnection<DB>>,
-    args: Box<Args>,
+    conn: PoolConnection<DB>,
+    args: Args,
     #[borrows(mut conn, args)]
     #[covariant] // Box is covariant.
     inner: BoxStream<'this, Result<Item, sqlx::Error>>,
@@ -36,7 +36,12 @@ where
         ) -> BoxStream<'this, Result<Item, sqlx::Error>>,
     ) -> Result<Self, sqlx::Error> {
         let conn = pool.acquire().await?;
-        Ok(Self::new(Box::new(conn), Box::new(args), inner_builder))
+        Ok(RowStreamBuilder {
+            conn,
+            args,
+            inner_builder,
+        }
+        .build())
     }
 }
 

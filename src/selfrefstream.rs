@@ -12,7 +12,7 @@ pub struct SelfRefStream<Args, Item>
 where
     Args: 'static,
 {
-    args: Box<Args>,
+    args: Args,
     #[borrows(args)]
     #[covariant] // Box is covariant.
     inner: BoxStream<'this, Result<Item, sqlx::Error>>,
@@ -26,10 +26,13 @@ where
     pub fn build(
         args: Args,
         inner_builder: impl for<'this> FnOnce(
-            &'this <Box<Args> as ::core::ops::Deref>::Target,
+            &'this Args,
         ) -> BoxStream<'this, Result<Item, sqlx::Error>>,
     ) -> Self {
-        Self::new(Box::new(args), inner_builder)
+        SelfRefStreamBuilder {
+            args,
+            inner_builder
+        }.build()
     }
 }
 
