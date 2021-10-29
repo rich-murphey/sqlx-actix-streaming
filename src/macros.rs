@@ -18,7 +18,6 @@ macro_rules! json_response [
                     ),
                     |buf: &mut BytesWriter, rec| {
                         serde_json::to_writer(buf, rec)
-                            .map_err(actix_web::error::ErrorInternalServerError)
                     },
                 )
             )
@@ -44,7 +43,6 @@ macro_rules! query_json [
                     ),
                     |buf: &mut BytesWriter, rec| {
                         serde_json::to_writer(buf, rec)
-                            .map_err(actix_web::error::ErrorInternalServerError)
                     },
                 )
             )
@@ -66,7 +64,6 @@ macro_rules! byte_stream [
             ),
             |buf: &mut BytesWriter, rec| {
                 serde_json::to_writer(buf, rec)
-                    .map_err(actix_web::error::ErrorInternalServerError)
             },
         )
     });
@@ -99,7 +96,6 @@ macro_rules! json_response_alt [
                     ),
                     |buf: &mut BytesWriter, rec: & $item_struct| {
                         serde_json::to_writer(buf, rec)
-                            .map_err(actix_web::error::ErrorInternalServerError)
                     },
                 )
             )
@@ -127,7 +123,6 @@ macro_rules! json_response_alt [
                     ),
                     |buf: &mut BytesWriter, rec: & $item_struct| {
                         serde_json::to_writer(buf, rec)
-                            .map_err(actix_web::error::ErrorInternalServerError)
                     },
                 )
             )
@@ -151,7 +146,6 @@ macro_rules! json_response_alt [
                     ),
                     |buf: &mut BytesWriter, rec: & $item_struct| {
                         serde_json::to_writer(buf, rec)
-                            .map_err(actix_web::error::ErrorInternalServerError)
                     },
                 )
             )
@@ -179,7 +173,6 @@ macro_rules! json_stream [
             ),
             |buf: &mut BytesWriter, row| {
                 serde_json::to_writer(buf, row)
-                    .map_err(actix_web::error::ErrorInternalServerError)
             },
         )
     });
@@ -199,7 +192,6 @@ macro_rules! json_stream [
             ),
             |buf: &mut BytesWriter, row| {
                 serde_json::to_writer(buf, row)
-                    .map_err(actix_web::error::ErrorInternalServerError)
             },
         )
     });

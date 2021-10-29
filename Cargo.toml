@@ -8,26 +8,9 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 
 [features]
-default = [ "sqlx/runtime-actix-rustls", "sqlx/postgres", "log" ]
-macros = []
-logging = ["log"]
-
-runtime-actix-native-tls = [ "sqlx/runtime-actix-native-tls" ]
-runtime-actix-rustls = [ "sqlx/runtime-actix-rustls" ]
-runtime-async-std-native-tls = [ "sqlx/runtime-async-std-native-tls" ]
-runtime-async-std-rustls = [ "sqlx/runtime-async-std-rustls" ]
-runtime-tokio-native-tls = [ "sqlx/runtime-tokio-native-tls" ]
-runtime-tokio-rustls = [ "sqlx/runtime-tokio-rustls" ]
-
-postgres = [ "sqlx/postgres" ]
-mysql = [ "sqlx/mysql" ]
-sqlite = [ "sqlx/sqlite" ]
-mssql = [ "sqlx/mssql" ]
+default = [ "log" ]
 
 [dependencies]
-actix-web = "4.0.0-beta.10"
-actix-utils = "3.0.0"
-# actix-web = { git = "https://github.com/actix/actix-web.git", features = ["cookies"] }
 bytes = "1.1.0"
 futures = "0.3.17"
 log = { version = "0.4.14", optional = true }
@@ -35,5 +18,3 @@ log = { version = "0.4.14", optional = true }
 ouroboros = { git = "https://github.com/joshua-maros/ouroboros.git" }
 serde = "1.0.130"
 serde_json = "1.0.68"
-sqlx = "0.5.9"
-# sqlx = { path = "../sqlx" }

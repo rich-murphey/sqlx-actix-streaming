@@ -1,4 +1,3 @@
-// -*- compile-command: "cargo check --features runtime-tokio-rustls,postgres"; -*-
 use futures::{
     prelude::*,
     stream::BoxStream,
@@ -8,26 +7,24 @@ pub use std::io::Write;
 use std::pin::Pin;
 
 #[ouroboros::self_referencing]
-pub struct SelfRefStream<Args, Item>
+pub struct SelfRefStream<Args, Item, Error>
 where
     Args: 'static,
 {
     args: Args,
     #[borrows(args)]
     #[covariant] // Box is covariant.
-    inner: BoxStream<'this, Result<Item, sqlx::Error>>,
+    inner: BoxStream<'this, Result<Item, Error>>,
 }
 
-impl<Args, Item> SelfRefStream<Args, Item>
+impl<Args, Item, Error> SelfRefStream<Args, Item, Error>
 where
     Args: 'static,
 {
     #[inline]
     pub fn build(
         args: Args,
-        inner_builder: impl for<'this> FnOnce(
-            &'this Args,
-        ) -> BoxStream<'this, Result<Item, sqlx::Error>>,
+        inner_builder: impl for<'this> FnOnce(&'this Args) -> BoxStream<'this, Result<Item, Error>>,
     ) -> Self {
         SelfRefStreamBuilder {
             args,
@@ -37,11 +34,11 @@ where
     }
 }
 
-impl<Args, Item> Stream for SelfRefStream<Args, Item>
+impl<Args, Item, Error> Stream for SelfRefStream<Args, Item, Error>
 where
     Args: 'static,
 {
-    type Item = Result<Item, sqlx::Error>;
+    type Item = Result<Item, Error>;
 
     #[inline]
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
