@@ -3,10 +3,10 @@ use futures::{
     task::{Context, Poll},
     Stream, TryStream,
 };
-pub use std::io::Write;
-use std::pin::Pin;
 #[cfg(feature = "log")]
 use log::*;
+pub use std::io::Write;
+use std::pin::Pin;
 
 pub struct BytesWriter(pub BytesMut);
 impl BytesWriter {
