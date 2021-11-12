@@ -7,9 +7,7 @@ pub use std::io::Write;
 use std::pin::Pin;
 
 #[ouroboros::self_referencing]
-pub struct SelfRefStream<Args, Item, Error>
-where
-    Args: 'static,
+pub struct SelfRefStream<Args: 'static, Item, Error>
 {
     args: Args,
     #[borrows(args)]
@@ -17,9 +15,7 @@ where
     inner: BoxStream<'this, Result<Item, Error>>,
 }
 
-impl<Args, Item, Error> SelfRefStream<Args, Item, Error>
-where
-    Args: 'static,
+impl<Args: 'static, Item, Error> SelfRefStream<Args, Item, Error>
 {
     #[inline]
     pub fn build(
@@ -34,9 +30,7 @@ where
     }
 }
 
-impl<Args, Item, Error> Stream for SelfRefStream<Args, Item, Error>
-where
-    Args: 'static,
+impl<Args: 'static, Item, Error> Stream for SelfRefStream<Args, Item, Error>
 {
     type Item = Result<Item, Error>;
 
