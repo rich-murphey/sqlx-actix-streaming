@@ -7,16 +7,14 @@ pub use std::io::Write;
 use std::pin::Pin;
 
 #[ouroboros::self_referencing]
-pub struct SelfRefStream<Args: 'static, Item, Error>
-{
+pub struct SelfRefStream<Args: 'static, Item, Error> {
     args: Args,
     #[borrows(args)]
     #[covariant] // Box is covariant.
     inner: BoxStream<'this, Result<Item, Error>>,
 }
 
-impl<Args: 'static, Item, Error> SelfRefStream<Args, Item, Error>
-{
+impl<Args: 'static, Item, Error> SelfRefStream<Args, Item, Error> {
     #[inline]
     pub fn build(
         args: Args,
@@ -30,8 +28,7 @@ impl<Args: 'static, Item, Error> SelfRefStream<Args, Item, Error>
     }
 }
 
-impl<Args: 'static, Item, Error> Stream for SelfRefStream<Args, Item, Error>
-{
+impl<Args: 'static, Item, Error> Stream for SelfRefStream<Args, Item, Error> {
     type Item = Result<Item, Error>;
 
     #[inline]
