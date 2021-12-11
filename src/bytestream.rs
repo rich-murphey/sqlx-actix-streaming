@@ -53,9 +53,9 @@ const BYTESTREAM_DEFAULT_ITEM_SIZE: usize = 2048;
 
 pub struct ByteStream<InnerStream, InnerError, Serializer, OuterError>
 where
-    InnerError: std::fmt::Debug,
+    InnerError: std::error::Error,
     InnerStream: TryStream<Error = InnerError>,
-    OuterError: From<InnerError> + std::fmt::Debug,
+    OuterError: From<InnerError> + std::error::Error,
     Serializer:
         FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), OuterError> + Unpin,
 {
@@ -74,9 +74,9 @@ where
 impl<InnerStream, InnerError, Serializer, OuterError>
     ByteStream<InnerStream, InnerError, Serializer, OuterError>
 where
-    InnerError: std::fmt::Debug,
+    InnerError: std::error::Error,
     InnerStream: TryStream<Error = InnerError>,
-    OuterError: From<InnerError> + std::fmt::Debug,
+    OuterError: From<InnerError> + std::error::Error,
     Serializer:
         FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), OuterError> + Unpin,
 {
@@ -146,9 +146,9 @@ where
 impl<InnerStream, InnerError, Serializer, OuterError> Stream
     for ByteStream<InnerStream, InnerError, Serializer, OuterError>
 where
-    InnerError: std::fmt::Debug,
+    InnerError: std::error::Error,
     InnerStream: TryStream<Error = InnerError>,
-    OuterError: From<InnerError> + std::fmt::Debug,
+    OuterError: From<InnerError> + std::error::Error,
     Serializer:
         FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), OuterError> + Unpin,
 {
@@ -219,9 +219,9 @@ where
 impl<InnerStream, InnerError, Serializer, OuterError> Drop
     for ByteStream<InnerStream, InnerError, Serializer, OuterError>
 where
-    InnerError: std::fmt::Debug,
+    InnerError: std::error::Error,
     InnerStream: TryStream<Error = InnerError>,
-    OuterError: From<InnerError> + std::fmt::Debug,
+    OuterError: From<InnerError> + std::error::Error,
     Serializer:
         FnMut(&mut BytesWriter, &<InnerStream as TryStream>::Ok) -> Result<(), OuterError> + Unpin,
 {
